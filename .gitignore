@@ -24,6 +24,8 @@ node_modules
 !.vscode/launch.json
 !.vscode/extensions.json
 
+test-db.ts
+
 # misc
 /.sass-cache
 /connect.lock

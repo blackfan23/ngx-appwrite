@@ -5,12 +5,7 @@ import { AccountService } from './lib/account.service';
 import { Appwrite } from './lib/appwrite.service';
 import { ClientService } from './lib/client.service';
 import { DatabasesService } from './lib/databases.service';
-
-const TEST_CONFIG = {
-  endpoint: 'https://appwrite.nas4.us/v1',
-  project: '63b82f479fbf81bfca01',
-  defaultDatabase: '63b82f88f0730faf2b9a'
-};
+import { TEST_CONFIG } from './test-db';
 
 const TEST_COLLECTION = '63b82fa8d35fde002a92';
 const TEST_DOCUMENT_ID = '63b8302ec685aeebe0d3';
@@ -26,7 +21,7 @@ const TEST_DOCUMENT: TestDocument = {
   firstName: 'Mark',
   lastName: 'Madlock',
   age: 32,
-  profession: 'Teacher'
+  profession: 'Teacher',
 };
 
 const BUCKET_ID = '63bc4cdf1bed091fecec';
@@ -101,23 +96,30 @@ describe('NgxAppwrite', () => {
 
     const RANDOM_ID = generateRandomString();
     /* ----------------------------- createDocument ---------------------------- */
-    const createdDocument = await appwriteService.databases.createDocument<TestDocument>(
-      TEST_COLLECTION,
-      RANDOM_ID,
-      CLONED_TEST_DOCUMENT
-    );
+    const createdDocument =
+      await appwriteService.databases.createDocument<TestDocument>(
+        TEST_COLLECTION,
+        CLONED_TEST_DOCUMENT,
+        [],
+        RANDOM_ID
+      );
     expect(createdDocument).toHaveProperty('$id');
-    expect(createdDocument).toEqual(expect.objectContaining(CLONED_TEST_DOCUMENT));
+    expect(createdDocument).toEqual(
+      expect.objectContaining(CLONED_TEST_DOCUMENT)
+    );
     /* ----------------------------- updateDocument ----------------------------- */
     CLONED_TEST_DOCUMENT.firstName = 'New';
     CLONED_TEST_DOCUMENT.lastName = 'Person';
-    const updatedDocument = await appwriteService.databases.updateDocument<TestDocument>(
-      TEST_COLLECTION,
-      RANDOM_ID,
-      CLONED_TEST_DOCUMENT
-    );
+    const updatedDocument =
+      await appwriteService.databases.updateDocument<TestDocument>(
+        TEST_COLLECTION,
+        RANDOM_ID,
+        CLONED_TEST_DOCUMENT
+      );
     expect(updatedDocument).toHaveProperty('$id');
-    expect(updatedDocument).toEqual(expect.objectContaining(CLONED_TEST_DOCUMENT));
+    expect(updatedDocument).toEqual(
+      expect.objectContaining(CLONED_TEST_DOCUMENT)
+    );
     /* ----------------------------- deleteDocument ----------------------------- */
     const deletedDocument = await appwriteService.databases.deleteDocument(
       TEST_COLLECTION,
