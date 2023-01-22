@@ -1,17 +1,17 @@
 import { Injectable } from '@angular/core';
 import { Account, Models } from 'appwrite';
 import {
+  BehaviorSubject,
   catchError,
   combineLatest,
-  defer,
+  debounceTime,
   distinctUntilKeyChanged,
-  map,
   Observable,
   of,
   shareReplay,
   startWith,
-  Subject,
   switchMap,
+  tap,
 } from 'rxjs';
 import { ClientService } from './client.service';
 import { watch } from './helpers';
@@ -20,15 +20,14 @@ import { watch } from './helpers';
   providedIn: 'root',
 })
 export class AccountService {
-  private _checkAuth$ = new Subject<boolean>();
-  private _account: Account | undefined;
+  private _checkAuth$ = new BehaviorSubject<boolean>(false);
+  private _account: Account;
   private _client$ = of(this.clientService.client).pipe(shareReplay(1));
 
   public account$: Observable<Models.Account<Models.Preferences>> =
     this._client$.pipe(
-      map((client) => new Account(client)),
-      switchMap((account) => {
-        return account.get();
+      switchMap(() => {
+        return this._account.get();
       }),
       shareReplay(1)
     );
@@ -38,21 +37,23 @@ export class AccountService {
       switchMap((client) =>
         combineLatest([
           watch(client, 'account').pipe(startWith(null)),
-          this._checkAuth$.pipe(startWith(null)),
+          this._checkAuth$,
         ]).pipe(
+          debounceTime(10),
+          tap(() => console.log('Triggering auth')),
           switchMap(() =>
-            defer(() =>
-              this.account$.pipe(
-                distinctUntilKeyChanged('$id'),
-                catchError(() => {
-                  console.error('Not Authenticated');
-                  return of(null);
-                })
-              )
+            this.account$.pipe(
+              distinctUntilKeyChanged('$id'),
+              startWith(null),
+              catchError((err, caught) => {
+                if (err instanceof Error) console.warn(err.message);
+                return caught;
+              })
             )
           )
         )
-      )
+      ),
+      shareReplay(1)
     );
 
   constructor(private clientService: ClientService) {
@@ -87,5 +88,24 @@ export class AccountService {
     const session = this._account?.createEmailSession(email, password);
     this.triggerAuthCheck();
     return session;
+  }
+
+  /**
+   * Delete Sessions
+   *
+   * Delete all sessions from the user account and remove any sessions cookies
+   * from the end client.
+   *
+   * @throws {AppwriteException}
+   * @returns {Promise}
+   */
+  async deleteSessions(): // eslint-disable-next-line @typescript-eslint/ban-types
+  Promise<{} | undefined> {
+    if (!this._account) {
+      return this.deleteSessions();
+    }
+    const result = this._account?.deleteSessions();
+    this.triggerAuthCheck();
+    return result;
   }
 }

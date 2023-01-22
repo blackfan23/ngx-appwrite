@@ -35,7 +35,7 @@ const SERVICES = [
 describe('NgxAppwrite', () => {
   let appwriteService: Appwrite;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     appwriteService = new Appwrite(
       new DatabasesService(
         new ClientService(TEST_CONFIG),
@@ -146,7 +146,7 @@ describe('NgxAppwrite', () => {
     });
   });
 
-  it.only('auth$ should fire on signin', (done) => {
+  it('auth$ should fire on signin', (done) => {
     appwriteService.account.auth$.subscribe((auth) => {
       if (auth) {
         expect(auth.email).toEqual(USER_DATA.email);
@@ -156,17 +156,18 @@ describe('NgxAppwrite', () => {
       expect(auth).toBeNull();
     });
 
-    appwriteService.account.createEmailSession(
-      USER_DATA.email,
-      USER_DATA.password
-    );
+    setTimeout(() => {
+      appwriteService.account.createEmailSession(
+        USER_DATA.email,
+        USER_DATA.password
+      );
+    }, 200);
   });
 
   it('should return an observable of type Models.Account<Models.Preferences> when logged in', (done) => {
     appwriteService.account
       .createEmailSession(USER_DATA.email, USER_DATA.password)
-      .then((account) => {
-        console.log(account);
+      .then(() => {
         appwriteService.account.account$.subscribe((account) => {
           expect(account).toBeDefined();
           expect(account.prefs).toBeDefined();
