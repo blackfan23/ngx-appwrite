@@ -175,6 +175,18 @@ describe('NgxAppwrite', () => {
         });
       });
   });
+
+  xit('should send an recovery email', (done) => {
+    appwriteService.account
+      .createEmailSession(USER_DATA.email, USER_DATA.password)
+      .then(() => {
+        appwriteService.account.createRecovery(
+          USER_DATA.email,
+          'https://appwrite.nas4.us'
+        );
+        done();
+      });
+  });
 });
 
 function generateRandomString(length: number = 16): string {

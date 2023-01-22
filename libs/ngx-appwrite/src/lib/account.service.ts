@@ -108,4 +108,33 @@ export class AccountService {
     this.triggerAuthCheck();
     return result;
   }
+  /**
+   * Create Password Recovery
+   *
+   * Sends the user an email with a temporary secret key for password reset.
+   * When the user clicks the confirmation link he is redirected back to your
+   * app password reset URL with the secret key and email address values
+   * attached to the URL query string. Use the query string params to submit a
+   * request to the [PUT
+   * /account/recovery](/docs/client/account#accountUpdateRecovery) endpoint to
+   * complete the process. The verification link sent to the user's email
+   * address is valid for 1 hour.
+   *
+   * @param {string} email
+   * @param {string} url
+   * @throws {AppwriteException}
+   * @returns {Promise}
+   */
+  async createRecovery(
+    email: string,
+    url: string
+  ): // eslint-disable-next-line @typescript-eslint/ban-types
+  Promise<Models.Token | undefined> {
+    if (!this._account) {
+      return this.createRecovery(email, url);
+    }
+    const result = this._account?.createRecovery(email, url);
+    this.triggerAuthCheck();
+    return result;
+  }
 }
