@@ -1,0 +1,29 @@
+import { Client, RealtimeResponseEvent } from 'appwrite';
+import { intersection } from 'lodash';
+import { Observable, Subscriber } from 'rxjs';
+
+export const watch = <T>(
+  client: Client,
+  channel: string | string[],
+  events?: string | string[]
+): Observable<RealtimeResponseEvent<T>> => {
+  const observable = new Observable<RealtimeResponseEvent<T>>(
+    (observer: Subscriber<RealtimeResponseEvent<T>>) => {
+      try {
+        client.subscribe<T>(channel, (response: RealtimeResponseEvent<T>) => {
+          if (!events) {
+            observer.next(response);
+          } else if (
+            (typeof events === 'string' && response.events.includes(events)) ||
+            intersection(response.events, events)
+          ) {
+            observer.next(response);
+          }
+        });
+      } catch (error) {
+        if (error instanceof Error) observer.error(error.message);
+      }
+    }
+  );
+  return observable;
+};

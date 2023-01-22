@@ -1,0 +1,12 @@
+{
+  "name": "ngx-appwrite",
+  "version": "0.1.7",
+  "peerDependencies": {
+    "@angular/common": "^15.1.0",
+    "@angular/core": "^15.1.0"
+  },
+  "dependencies": {
+    "tslib": "^2.4.1"
+  },
+  "sideEffects": false
+}
