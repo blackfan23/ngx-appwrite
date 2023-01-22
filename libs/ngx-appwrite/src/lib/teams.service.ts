@@ -1,18 +1,20 @@
 import { Injectable } from '@angular/core';
 import { ID, Models, Teams } from 'appwrite';
-import { map, shareReplay } from 'rxjs';
+import { map, of, shareReplay } from 'rxjs';
 import { AccountService } from './account.service';
 import { AppwriteConfig } from './appwrite.config';
 import { ClientService } from './client.service';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class TeamsService {
   private _teams: Teams | undefined;
   config: AppwriteConfig | undefined;
 
-  teams$ = this.clientService.client$.pipe(
+  private _client$ = of(this.clientService.client).pipe(shareReplay(1));
+
+  teams$ = this._client$.pipe(
     map((client) => {
       if (!this._teams) {
         this._teams = new Teams(client);
@@ -22,7 +24,10 @@ export class TeamsService {
     shareReplay(1)
   );
 
-  constructor(private clientService: ClientService, private accountService: AccountService) {
+  constructor(
+    private clientService: ClientService,
+    private accountService: AccountService
+  ) {
     this.config = this.clientService.config;
   }
 
@@ -260,7 +265,12 @@ export class TeamsService {
     secret: string
   ): Promise<Models.Membership | undefined> {
     try {
-      return this._teams?.updateMembershipStatus(teamId, membershipId, userId, secret);
+      return this._teams?.updateMembershipStatus(
+        teamId,
+        membershipId,
+        userId,
+        secret
+      );
     } catch (error) {
       if (error instanceof Error) console.error(error.message);
       return undefined;
@@ -278,8 +288,11 @@ export class TeamsService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  // eslint-disable-next-line @typescript-eslint/ban-types
-  async deleteMembership(teamId: string, membershipId: string): Promise<{} | undefined> {
+  async deleteMembership(
+    teamId: string,
+    membershipId: string
+    // eslint-disable-next-line @typescript-eslint/ban-types
+  ): Promise<{} | undefined> {
     try {
       return this._teams?.deleteMembership(teamId, membershipId);
     } catch (error) {

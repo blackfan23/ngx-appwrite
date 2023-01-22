@@ -1,13 +1,21 @@
 import { Injectable } from '@angular/core';
+import { AccountService } from './account.service';
 import { DatabasesService } from './databases.service';
+import { TeamsService } from './teams.service';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class Appwrite {
-  databases = this.dbs;
+  databases = this._databases;
+  teams = this._teams;
+  account = this._account;
 
-  constructor(private dbs: DatabasesService) {}
+  constructor(
+    private _databases: DatabasesService,
+    private _teams: TeamsService,
+    private _account: AccountService
+  ) {}
 
   /* -------------------------------------------------------------------------- */
   /*      Expose these in order to allow full interaction with the web SDK      */

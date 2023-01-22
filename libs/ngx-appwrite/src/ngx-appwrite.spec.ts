@@ -5,7 +5,8 @@ import { AccountService } from './lib/account.service';
 import { Appwrite } from './lib/appwrite.service';
 import { ClientService } from './lib/client.service';
 import { DatabasesService } from './lib/databases.service';
-import { TEST_CONFIG } from './test-db';
+import { TeamsService } from './lib/teams.service';
+import { TEST_CONFIG, USER_DATA } from './test-db';
 
 const TEST_COLLECTION = '63b82fa8d35fde002a92';
 const TEST_DOCUMENT_ID = '63b8302ec685aeebe0d3';
@@ -26,6 +27,11 @@ const TEST_DOCUMENT: TestDocument = {
 
 const BUCKET_ID = '63bc4cdf1bed091fecec';
 
+const SERVICES = [
+  new ClientService(TEST_CONFIG),
+  new AccountService(new ClientService(TEST_CONFIG)),
+];
+
 describe('NgxAppwrite', () => {
   let appwriteService: Appwrite;
 
@@ -34,7 +40,12 @@ describe('NgxAppwrite', () => {
       new DatabasesService(
         new ClientService(TEST_CONFIG),
         new AccountService(new ClientService(TEST_CONFIG))
-      )
+      ),
+      new TeamsService(
+        new ClientService(TEST_CONFIG),
+        new AccountService(new ClientService(TEST_CONFIG))
+      ),
+      new AccountService(new ClientService(TEST_CONFIG))
     );
   });
 
@@ -126,6 +137,42 @@ describe('NgxAppwrite', () => {
       RANDOM_ID
     );
     expect(deletedDocument).toStrictEqual({ message: '' });
+  });
+
+  it('auth$ return null if unauthenticated', (done) => {
+    appwriteService.account.auth$.subscribe((auth) => {
+      expect(auth).toBeNull();
+      done();
+    });
+  });
+
+  it.only('auth$ should fire on signin', (done) => {
+    appwriteService.account.auth$.subscribe((auth) => {
+      if (auth) {
+        expect(auth.email).toEqual(USER_DATA.email);
+        done();
+      }
+
+      expect(auth).toBeNull();
+    });
+
+    appwriteService.account.createEmailSession(
+      USER_DATA.email,
+      USER_DATA.password
+    );
+  });
+
+  it('should return an observable of type Models.Account<Models.Preferences> when logged in', (done) => {
+    appwriteService.account
+      .createEmailSession(USER_DATA.email, USER_DATA.password)
+      .then((account) => {
+        console.log(account);
+        appwriteService.account.account$.subscribe((account) => {
+          expect(account).toBeDefined();
+          expect(account.prefs).toBeDefined();
+          done();
+        });
+      });
   });
 });
 

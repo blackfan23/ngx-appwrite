@@ -5,6 +5,7 @@ import {
   firstValueFrom,
   map,
   Observable,
+  of,
   shareReplay,
   startWith,
   switchMap,
@@ -22,10 +23,11 @@ const DATABASE_ERROR =
 })
 export class DatabasesService {
   private _databases: Databases | undefined;
+  private _client$ = of(this.clientService.client).pipe(shareReplay(1));
 
   config: AppwriteConfig | undefined;
 
-  databases$ = this.clientService.client$.pipe(
+  databases$ = this._client$.pipe(
     map((client) => {
       if (!this._databases) {
         this._databases = new Databases(client);
@@ -220,7 +222,7 @@ export class DatabasesService {
     events: string | string[] | undefined,
     initialList: Models.DocumentList<Models.Document>
   ): Observable<Models.DocumentList<Models.Document>> {
-    return this.clientService.client$.pipe(
+    return this._client$.pipe(
       switchMap((client) => watch<Models.Document>(client, path, events)),
       map((res: RealtimeResponseEvent<Models.Document>) => {
         return produce(initialList, (draft) => {
