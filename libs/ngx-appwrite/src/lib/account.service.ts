@@ -566,7 +566,7 @@ export class AccountService {
   async deleteSession(
     sessionId: string = 'current'
   ): // eslint-disable-next-line @typescript-eslint/ban-types
-  Promise<{} | undefined> {
+  Promise<{}> {
     if (!this._account) {
       return this.deleteSession();
     }
@@ -590,7 +590,7 @@ export class AccountService {
   async updateSession(
     sessionId: string = 'current'
   ): // eslint-disable-next-line @typescript-eslint/ban-types
-  Promise<{} | undefined> {
+  Promise<{}> {
     if (!this._account) {
       return this.updateSession(sessionId);
     }
@@ -609,7 +609,7 @@ export class AccountService {
    * @returns {Promise}
    */
   async deleteSessions(): // eslint-disable-next-line @typescript-eslint/ban-types
-  Promise<{} | undefined> {
+  Promise<{}> {
     if (!this._account) {
       return this.deleteSessions();
     }
@@ -638,11 +638,157 @@ export class AccountService {
     email: string,
     url: string
   ): // eslint-disable-next-line @typescript-eslint/ban-types
-  Promise<Models.Token | undefined> {
+  Promise<Models.Token> {
     if (!this._account) {
       return this.createRecovery(email, url);
     }
     const result = this._account.createRecovery(email, url);
+    this.triggerAuthCheck();
+    return result;
+  }
+
+  /**
+   * Create Password Recovery (confirmation)
+   *
+   * Use this endpoint to complete the user account password reset. Both the
+   * **userId** and **secret** arguments will be passed as query parameters to
+   * the redirect URL you have provided when sending your request to the [POST
+   * /account/recovery](/docs/client/account#accountCreateRecovery) endpoint.
+   *
+   * Please note that in order to avoid a [Redirect
+   * Attack](https://github.com/OWASP/CheatSheetSeries/blob/master/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.md)
+   * the only valid redirect URLs are the ones from domains you have set when
+   * adding your platforms in the console interface.
+   *
+   * @param {string} userId
+   * @param {string} secret
+   * @param {string} password
+   * @param {string} passwordAgain
+   * @throws {AppwriteException}
+   * @returns {Promise}
+   */
+  async updateRecovery(
+    userId: string,
+    secret: string,
+    password: string,
+    passwordAgain: string
+  ): // eslint-disable-next-line @typescript-eslint/ban-types
+  Promise<Models.Token> {
+    if (!this._account) {
+      return this.updateRecovery(userId, secret, password, passwordAgain);
+    }
+    const result = this._account.updateRecovery(
+      userId,
+      secret,
+      password,
+      passwordAgain
+    );
+    this.triggerAuthCheck();
+    return result;
+  }
+  /**
+   * Create Email Verification
+   *
+   * Use this endpoint to send a verification message to your user email address
+   * to confirm they are the valid owners of that address. Both the **userId**
+   * and **secret** arguments will be passed as query parameters to the URL you
+   * have provided to be attached to the verification email. The provided URL
+   * should redirect the user back to your app and allow you to complete the
+   * verification process by verifying both the **userId** and **secret**
+   * parameters. Learn more about how to [complete the verification
+   * process](/docs/client/account#accountUpdateEmailVerification). The
+   * verification link sent to the user's email address is valid for 7 days.
+   *
+   * Please note that in order to avoid a [Redirect
+   * Attack](https://github.com/OWASP/CheatSheetSeries/blob/master/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.md),
+   * the only valid redirect URLs are the ones from domains you have set when
+   * adding your platforms in the console interface.
+   *
+   *
+   * @param {string} url
+   * @throws {AppwriteException}
+   * @returns {Promise}
+   */
+  async createVerification(
+    url: string
+  ): // eslint-disable-next-line @typescript-eslint/ban-types
+  Promise<Models.Token> {
+    if (!this._account) {
+      return this.createVerification(url);
+    }
+    const result = this._account.createVerification(url);
+    this.triggerAuthCheck();
+    return result;
+  }
+  /**
+   * Create Email Verification (confirmation)
+   *
+   * Use this endpoint to complete the user email verification process. Use both
+   * the **userId** and **secret** parameters that were attached to your app URL
+   * to verify the user email ownership. If confirmed this route will return a
+   * 200 status code.
+   *
+   * @param {string} userId
+   * @param {string} secret
+   * @throws {AppwriteException}
+   * @returns {Promise}
+   */
+  async updateVerification(
+    userId: string,
+    secret: string
+  ): // eslint-disable-next-line @typescript-eslint/ban-types
+  Promise<Models.Token> {
+    if (!this._account) {
+      return this.updateVerification(userId, secret);
+    }
+    const result = this._account.updateVerification(userId, secret);
+    this.triggerAuthCheck();
+    return result;
+  }
+
+  /**
+   * Create Phone Verification
+   *
+   * Use this endpoint to send a verification SMS to the currently logged in
+   * user. This endpoint is meant for use after updating a user's phone number
+   * using the [accountUpdatePhone](/docs/client/account#accountUpdatePhone)
+   * endpoint. Learn more about how to [complete the verification
+   * process](/docs/client/account#accountUpdatePhoneVerification). The
+   * verification code sent to the user's phone number is valid for 15 minutes.
+   *
+   * @throws {AppwriteException}
+   * @returns {Promise}
+   */
+  createPhoneVerification(): Promise<Models.Token> {
+    if (!this._account) {
+      return this.createPhoneVerification();
+    }
+    const result = this._account.createPhoneVerification();
+    this.triggerAuthCheck();
+    return result;
+  }
+
+  /**
+   * Create Phone Verification (confirmation)
+   *
+   * Use this endpoint to complete the user phone verification process. Use the
+   * **userId** and **secret** that were sent to your user's phone number to
+   * verify the user email ownership. If confirmed this route will return a 200
+   * status code.
+   *
+   * @param {string} userId
+   * @param {string} secret
+   * @throws {AppwriteException}
+   * @returns {Promise}
+   */
+  updatePhoneVerification(
+    userId: string,
+    secret: string
+  ): Promise<Models.Token> {
+    if (!this._account) {
+      return this.updatePhoneVerification(userId, secret);
+    }
+    const result = this._account.updatePhoneVerification(userId, secret);
     this.triggerAuthCheck();
     return result;
   }
