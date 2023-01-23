@@ -31,9 +31,7 @@ export class AccountService {
   /* -------------------------------------------------------------------------- */
   public account$: Observable<Models.Account<Models.Preferences>> =
     this._client$.pipe(
-      switchMap(() => {
-        return this._account.get();
-      }),
+      switchMap(() => this.get()),
       shareReplay(1)
     );
 
@@ -284,6 +282,79 @@ export class AccountService {
       return this.updatePhoneSession(userId, secret);
     }
     const session = this._account.updatePhoneSession(userId, secret);
+    this.triggerAuthCheck();
+    return session;
+  }
+  /**
+   * Create Anonymous Session
+   *
+   * Use this endpoint to allow a new user to register an anonymous account in
+   * your project. This route will also create a new session for the user. To
+   * allow the new user to convert an anonymous account to a normal account, you
+   * need to update its [email and
+   * password](/docs/client/account#accountUpdateEmail) or create an [OAuth2
+   * session](/docs/client/account#accountCreateOAuth2Session).
+   *
+   * @throws {AppwriteException}
+   * @returns {Promise}
+   */
+  createAnonymousSession(): Promise<Models.Session> {
+    if (!this._account) {
+      return this.createAnonymousSession();
+    }
+    const session = this._account.createAnonymousSession();
+    this.triggerAuthCheck();
+    return session;
+  }
+  /**
+   * Create JWT
+   *
+   * Use this endpoint to create a JSON Web Token. You can use the resulting JWT
+   * to authenticate on behalf of the current user when working with the
+   * Appwrite server-side API and SDKs. The JWT secret is valid for 15 minutes
+   * from its creation and will be invalid if the user will logout in that time
+   * frame.
+   *
+   * @throws {AppwriteException}
+   * @returns {Promise}
+   */
+  createJWT(): Promise<Models.Jwt> {
+    if (!this._account) {
+      return this.createJWT();
+    }
+    const session = this._account.createJWT();
+    this.triggerAuthCheck();
+    return session;
+  }
+  /**
+   * Get Account
+   *
+   * Get currently logged in user data as JSON object.
+   *
+   * @throws {AppwriteException}
+   * @returns {Promise}
+   */
+  get(): Promise<Models.Account<Models.Preferences>> {
+    if (!this._account) {
+      return this.get();
+    }
+    const session = this._account.get();
+    this.triggerAuthCheck();
+    return session;
+  }
+  /**
+   * Get Account Preferences
+   *
+   * Get currently logged in user preferences as a key-value object.
+   *
+   * @throws {AppwriteException}
+   * @returns {Promise}
+   */
+  getPrefs(): Promise<Models.Preferences> {
+    if (!this._account) {
+      return this.getPrefs();
+    }
+    const session = this._account.getPrefs();
     this.triggerAuthCheck();
     return session;
   }
