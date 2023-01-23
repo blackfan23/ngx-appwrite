@@ -63,6 +63,10 @@ export class AccountService {
     this._account = new Account(this.clientService.client);
   }
 
+  /* -------------------------------------------------------------------------- */
+  /*    Default API - https://appwrite.io/docs/client/account?sdk=web-default   */
+  /* -------------------------------------------------------------------------- */
+
   /**
    * Create Account
    *
@@ -358,6 +362,242 @@ export class AccountService {
     this.triggerAuthCheck();
     return session;
   }
+  /**
+   * List Sessions
+   *
+   * Get currently logged in user list of active sessions across different
+   * devices.
+   *
+   * @throws {AppwriteException}
+   * @returns {Promise}
+   */
+  listSessions(): Promise<Models.SessionList> {
+    if (!this._account) {
+      return this.listSessions();
+    }
+    const session = this._account.listSessions();
+    this.triggerAuthCheck();
+    return session;
+  }
+  /**
+   * List Logs
+   *
+   * Get currently logged in user list of latest security activity logs. Each
+   * log returns user IP address, location and date and time of log.
+   *
+   * @param {string[]} queries
+   * @throws {AppwriteException}
+   * @returns {Promise}
+   */
+  listLogs(queries: string[] = []): Promise<Models.LogList> {
+    if (!this._account) {
+      return this.listLogs(queries);
+    }
+    const session = this._account.listLogs(queries);
+    this.triggerAuthCheck();
+    return session;
+  }
+  /**
+   * Get Session
+   *
+   * Use this endpoint to get a logged in user's session using a Session ID.
+   * Inputting 'current' will return the current session being used.
+   *
+   * @param {string} sessionId
+   * default is 'current' session
+   * @throws {AppwriteException}
+   * @returns {Promise}
+   */
+  getSession(sessionId: string = 'current'): Promise<Models.Session> {
+    if (!this._account) {
+      return this.getSession(sessionId);
+    }
+    const session = this._account.getSession(sessionId);
+    this.triggerAuthCheck();
+    return session;
+  }
+  /**
+   * Update Name
+   *
+   * Update currently logged in user account name.
+   *
+   * @param {string} name
+   * @throws {AppwriteException}
+   * @returns {Promise}
+   */
+  updateName(name: string): Promise<Models.Preferences> {
+    if (!this._account) {
+      return this.updateName(name);
+    }
+    const session = this._account.updateName(name);
+    this.triggerAuthCheck();
+    return session;
+  }
+  /**
+   * Update Password
+   *
+   * Update currently logged in user password. For validation, user is required
+   * to pass in the new password, and the old password. For users created with
+   * OAuth, Team Invites and Magic URL, oldPassword is optional.
+   *
+   * @param {string} password
+   * @param {string} oldPassword
+   * @throws {AppwriteException}
+   * @returns {Promise}
+   */
+  updatePassword(
+    name: string,
+    oldPassword?: string
+  ): Promise<Models.Account<Models.Preferences>> {
+    if (!this._account) {
+      return this.updatePassword(name, oldPassword);
+    }
+    const session = this._account.updatePassword(name, oldPassword);
+    this.triggerAuthCheck();
+    return session;
+  }
+  /**
+   * Update Email
+   *
+   * Update currently logged in user account email address. After changing user
+   * address, the user confirmation status will get reset. A new confirmation
+   * email is not sent automatically however you can use the send confirmation
+   * email endpoint again to send the confirmation email. For security measures,
+   * user password is required to complete this request.
+   * This endpoint can also be used to convert an anonymous account to a normal
+   * one, by passing an email address and a new password.
+   *
+   *
+   * @param {string} email
+   * @param {string} password
+   * @throws {AppwriteException}
+   * @returns {Promise}
+   */
+  updateEmail(
+    email: string,
+    password: string
+  ): Promise<Models.Account<Models.Preferences>> {
+    if (!this._account) {
+      return this.updateEmail(email, password);
+    }
+    const session = this._account.updateEmail(email, password);
+    this.triggerAuthCheck();
+    return session;
+  }
+  /**
+   * Update Phone
+   *
+   * Update the currently logged in user's phone number. After updating the
+   * phone number, the phone verification status will be reset. A confirmation
+   * SMS is not sent automatically, however you can use the [POST
+   * /account/verification/phone](/docs/client/account#accountCreatePhoneVerification)
+   * endpoint to send a confirmation SMS.
+   *
+   * @param {string} phone
+   * @param {string} password
+   * @throws {AppwriteException}
+   * @returns {Promise}
+   */
+  updatePhone(
+    phoneNumber: string,
+    password: string
+  ): Promise<Models.Account<Models.Preferences>> {
+    if (!this._account) {
+      return this.updatePhone(phoneNumber, password);
+    }
+    const session = this._account.updatePhone(phoneNumber, password);
+    this.triggerAuthCheck();
+    return session;
+  }
+
+  /**
+   * Update Preferences
+   *
+   * Update currently logged in user account preferences. The object you pass is
+   * stored as is, and replaces any previous value. The maximum allowed prefs
+   * size is 64kB and throws error if exceeded.
+   *
+   * @param {object} prefs
+   * @throws {AppwriteException}
+   * @returns {Promise}
+   */
+  updatePrefs(
+    prefs: Models.Preferences
+  ): Promise<Models.Account<Models.Preferences>> {
+    if (!this._account) {
+      return this.updatePrefs(prefs);
+    }
+    const session = this._account.updatePrefs(prefs);
+    this.triggerAuthCheck();
+    return session;
+  }
+
+  /**
+   * Update Status
+   *
+   * Block the currently logged in user account. Behind the scene, the user
+   * record is not deleted but permanently blocked from any access. To
+   * completely delete a user, use the Users API instead.
+   *
+   * @throws {AppwriteException}
+   * @returns {Promise}
+   */
+  updateStatus(): Promise<Models.Account<Models.Preferences>> {
+    if (!this._account) {
+      return this.updateStatus();
+    }
+    const session = this._account.updateStatus();
+    this.triggerAuthCheck();
+    return session;
+  }
+  /**
+   * Delete Session
+   *
+   * Use this endpoint to log out the currently logged in user from all their
+   * account sessions across all of their different devices. When using the
+   * Session ID argument, only the unique session ID provided is deleted.
+   *
+   *
+   * @param {string} sessionId
+   * defaults to 'current'
+   * @throws {AppwriteException}
+   * @returns {Promise}
+   */
+  async deleteSession(
+    sessionId: string = 'current'
+  ): // eslint-disable-next-line @typescript-eslint/ban-types
+  Promise<{} | undefined> {
+    if (!this._account) {
+      return this.deleteSession();
+    }
+    const result = this._account.deleteSession(sessionId);
+    this.triggerAuthCheck();
+    return result;
+  }
+
+  /**
+   * Update OAuth Session (Refresh Tokens)
+   *
+   * Access tokens have limited lifespan and expire to mitigate security risks.
+   * If session was created using an OAuth provider, this route can be used to
+   * "refresh" the access token.
+   *
+   * @param {string} sessionId
+   * defaults to 'current'
+   * @throws {AppwriteException}
+   * @returns {Promise}
+   */
+  async updateSession(
+    sessionId: string = 'current'
+  ): // eslint-disable-next-line @typescript-eslint/ban-types
+  Promise<{} | undefined> {
+    if (!this._account) {
+      return this.updateSession(sessionId);
+    }
+    const result = this._account.updateSession(sessionId);
+    this.triggerAuthCheck();
+    return result;
+  }
 
   /**
    * Delete Sessions
@@ -407,13 +647,59 @@ export class AccountService {
     return result;
   }
 
+  /* -------------------------------------------------------------------------- */
+  /*                          Additional functionality                          */
+  /* -------------------------------------------------------------------------- */
+
+  /**
+   * Convert Anonymous account with password
+   *
+   * This endpoint is a shortcut in order to convert an anonymous account
+   * to a permanent one
+   *
+   * @param {string} email
+   * @param {string} password
+   * @throws {AppwriteException}
+   * @returns {Promise}
+   */
+  convertAnonymousAccountWithEmailAndPassword(
+    email: string,
+    password: string
+  ): Promise<Models.Account<Models.Preferences>> {
+    if (!this._account) {
+      return this.convertAnonymousAccountWithEmailAndPassword(email, password);
+    }
+    const session = this._account.updateEmail(email, password);
+    this.triggerAuthCheck();
+    return session;
+  }
+
+  /**
+   * Block Account - This is a renaming of the >> Update Status << API method
+   *
+   * Block the currently logged in user account. Behind the scene, the user
+   * record is not deleted but permanently blocked from any access. To
+   * completely delete a user, use the Users API instead.
+   *
+   * @throws {AppwriteException}
+   * @returns {Promise}
+   */
+  blockAccount(): Promise<Models.Account<Models.Preferences>> {
+    if (!this._account) {
+      return this.blockAccount();
+    }
+    const session = this._account.updateStatus();
+    this.triggerAuthCheck();
+    return session;
+  }
+
   /**
    * Triggering the Auth Check
    *
-   * Trigger a review of all account and
+   * Trigger a check of all account and
    * session-related actions to enable
    * reactive monitoring of authentication status
-   *
+   * @returns {void}
    */
   triggerAuthCheck(): void {
     this._checkAuth$.next(true);

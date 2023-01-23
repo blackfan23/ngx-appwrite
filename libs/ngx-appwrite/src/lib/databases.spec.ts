@@ -1,12 +1,12 @@
 import * as crypto from 'crypto';
 import { cloneDeep } from 'lodash';
 import { catchError, EMPTY } from 'rxjs';
-import { AccountService } from './lib/account.service';
-import { Appwrite } from './lib/appwrite.service';
-import { ClientService } from './lib/client.service';
-import { DatabasesService } from './lib/databases.service';
-import { TeamsService } from './lib/teams.service';
-import { TEST_CONFIG } from './test-db';
+import { AccountService } from './account.service';
+import { Appwrite } from './appwrite.service';
+import { ClientService } from './client.service';
+import { DatabasesService } from './databases.service';
+import { TeamsService } from './teams.service';
+import { TEST_CONFIG } from '../test-db';
 
 const TEST_COLLECTION = '63b82fa8d35fde002a92';
 const TEST_DOCUMENT_ID = '63b8302ec685aeebe0d3';
