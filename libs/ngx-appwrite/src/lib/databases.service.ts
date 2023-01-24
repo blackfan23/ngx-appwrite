@@ -1,15 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Databases, ID, Models, Query, RealtimeResponseEvent } from 'appwrite';
 import { produce } from 'immer';
-import {
-  firstValueFrom,
-  map,
-  Observable,
-  of,
-  shareReplay,
-  startWith,
-  switchMap,
-} from 'rxjs';
+import { map, Observable, of, shareReplay, startWith, switchMap } from 'rxjs';
 import { AccountService } from './account.service';
 import { AppwriteConfig } from './appwrite.config';
 import { ClientService } from './client.service';
@@ -22,18 +14,12 @@ const DATABASE_ERROR =
   providedIn: 'root',
 })
 export class DatabasesService {
-  private _databases: Databases | undefined;
+  private _databases: Databases;
   private _client$ = of(this.clientService.client).pipe(shareReplay(1));
-
-  config: AppwriteConfig | undefined;
+  private _config: AppwriteConfig;
 
   databases$ = this._client$.pipe(
-    map((client) => {
-      if (!this._databases) {
-        this._databases = new Databases(client);
-      }
-      return this._databases;
-    }),
+    map(() => this._databases),
     shareReplay(1)
   );
 
@@ -41,7 +27,175 @@ export class DatabasesService {
     private clientService: ClientService,
     private accountService: AccountService
   ) {
-    this.config = this.clientService.config;
+    this._config = this.clientService.config;
+    this._databases = new Databases(this.clientService.client);
+  }
+
+  /* -------------------------------------------------------------------------- */
+  /*     Databases - Appwrite API https://appwrite.io/docs/client/databases     */
+  /* -------------------------------------------------------------------------- */
+
+  /**
+   * Create Document
+   *
+   * Create a new Document. Before using this route, you should create a new
+   * collection resource using either a [server
+   * integration](/docs/server/databases#databasesCreateCollection) API or
+   * directly from your database console.
+   *
+   
+   * @param {string} collectionId
+   
+   * @param {Omit<Document, keyof Models.Document>} data
+   * @param {string[]} [permissions] 
+   * @param {string} [documentId]
+   * defaults to ID.unique()
+   * @param {string} [alternateDatabaseId]
+   * @throws {AppwriteException}
+   * @returns {Promise}
+   */
+  public async createDocument<DocumentType>(
+    collectionId: string,
+    data: Omit<DocumentType & Models.Document, keyof Models.Document>,
+    permissions?: string[],
+    documentId: string = ID.unique(),
+    alternateDatabaseId?: string
+  ): Promise<DocumentType & Models.Document> {
+    const databaseId = this._config?.defaultDatabase ?? alternateDatabaseId;
+    if (!databaseId) {
+      throw new Error(DATABASE_ERROR);
+    } else {
+      this.accountService.triggerAuthCheck();
+      return this._databases.createDocument<DocumentType & Models.Document>(
+        databaseId,
+        collectionId,
+        documentId,
+        data,
+        permissions
+      );
+    }
+  }
+  /**
+   * Get Document
+   *
+   * Get a document by its unique ID. This endpoint response returns a JSON
+   * object with the document data.
+   *
+   * @param {string} collectionId
+   * @param {string} documentId
+   * @param {string} [alternateDatabaseId]
+   * @throws {AppwriteException}
+   * @returns {Promise}
+   */
+  public async getDocument<DocumentType>(
+    collectionId: string,
+    documentId: string = ID.unique(),
+    alternateDatabaseId?: string
+  ): Promise<DocumentType & Models.Document> {
+    const databaseId = this._config?.defaultDatabase ?? alternateDatabaseId;
+    if (!databaseId) {
+      throw new Error(DATABASE_ERROR);
+    } else {
+      this.accountService.triggerAuthCheck();
+      return this._databases.getDocument<DocumentType & Models.Document>(
+        databaseId,
+        collectionId,
+        documentId
+      );
+    }
+  }
+  /**
+   * List Documents
+   *
+   * Get a list of all the user's documents in a given collection. You can use
+   * the query params to filter your results.
+   *
+   * @param {string} collectionId
+   * @param {string[]} queries
+   * @param {string} [alternateDatabaseId]
+   * @throws {AppwriteException}
+   * @returns {Promise}
+   */
+  public async listDocuments<DocumentType>(
+    collectionId: string,
+    queries?: string[],
+    alternateDatabaseId?: string
+  ): Promise<Models.DocumentList<DocumentType & Models.Document>> {
+    const databaseId = this._config?.defaultDatabase ?? alternateDatabaseId;
+    if (!databaseId) {
+      throw new Error(DATABASE_ERROR);
+    } else {
+      this.accountService.triggerAuthCheck();
+      return this._databases.listDocuments<DocumentType & Models.Document>(
+        databaseId,
+        collectionId,
+        queries
+      );
+    }
+  }
+  /**
+   * Update Document
+   *
+   * Update a document by its unique ID. Using the patch method you can pass
+   * only specific fields that will get updated.
+   *
+   * @param {string} databaseId
+   * @param {string} collectionId
+   * @param {string} documentId
+   * @param {Partial<Omit<Document, keyof Models.Document>>} data
+   * @param {string[]} permissions
+   * @throws {AppwriteException}
+   * @returns {Promise}
+   */
+  public async updateDocument<DocumentType>(
+    collectionId: string,
+    documentId: string,
+    data: Omit<DocumentType & Models.Document, keyof Models.Document>,
+    permissions?: string[],
+    alternateDatabaseId?: string
+  ): Promise<(DocumentType & Models.Document) | undefined> {
+    const databaseId = this._config?.defaultDatabase ?? alternateDatabaseId;
+    if (!databaseId) {
+      throw new Error(DATABASE_ERROR);
+    } else {
+      this.accountService.triggerAuthCheck();
+      return this._databases.updateDocument<DocumentType & Models.Document>(
+        databaseId,
+        collectionId,
+        documentId,
+        data,
+        permissions
+      );
+    }
+  }
+
+  /**
+   * Delete Document
+   *
+   * Delete a document by its unique ID.
+   *
+   * @param {string} databaseId
+   * @param {string} collectionId
+   * @param {string} documentId
+   * @throws {AppwriteException}
+   * @returns {Promise}
+   */
+  public async deleteDocument(
+    collectionId: string,
+    documentId: string,
+    alternateDatabaseId?: string
+  ): Promise<Record<string, unknown> | undefined> {
+    const databaseId = this._config?.defaultDatabase ?? alternateDatabaseId;
+    if (!databaseId) {
+      throw new Error(DATABASE_ERROR);
+    } else {
+      this.accountService.triggerAuthCheck();
+      return this._databases.deleteDocument(
+        databaseId,
+        collectionId,
+        documentId
+      );
+    }
   }
 
   /* -------------------------------------------------------------------------- */
@@ -105,108 +259,13 @@ export class DatabasesService {
   // https://appwrite.io/docs/databases#querying-documents
   // right now this is resolved by only watching ids of the original query list
 
-  /* -------------------------------------------------------------------------- */
-  /*                                Database CRUD                               */
-  /* -------------------------------------------------------------------------- */
-
-  public async createDocument<DocumentType>(
-    collectionId: string,
-    data: Omit<DocumentType & Models.Document, keyof Models.Document>,
-    permissions?: string[],
-    documentId: string = ID.unique(),
-    alternateDatabaseId?: string
-  ): Promise<(DocumentType & Models.Document) | undefined> {
-    try {
-      const databaseId = this.config?.defaultDatabase ?? alternateDatabaseId;
-      if (!databaseId) {
-        throw new Error(DATABASE_ERROR);
-      } else {
-        this.accountService.triggerAuthCheck();
-        return firstValueFrom(
-          this.databases$.pipe(
-            switchMap((db) =>
-              db.createDocument<DocumentType & Models.Document>(
-                databaseId,
-                collectionId,
-                documentId,
-                data,
-                permissions
-              )
-            )
-          )
-        );
-      }
-    } catch (error) {
-      console.error(error);
-      return undefined;
-    }
-  }
-
-  public async updateDocument<DocumentType>(
-    collectionId: string,
-    documentId: string,
-    data: Omit<DocumentType & Models.Document, keyof Models.Document>,
-    permissions?: string[],
-    alternateDatabaseId?: string
-  ): Promise<(DocumentType & Models.Document) | undefined> {
-    try {
-      const databaseId = this.config?.defaultDatabase ?? alternateDatabaseId;
-      if (!databaseId) {
-        throw new Error(DATABASE_ERROR);
-      } else {
-        this.accountService.triggerAuthCheck();
-        return firstValueFrom(
-          this.databases$.pipe(
-            switchMap((db) =>
-              db.updateDocument<DocumentType & Models.Document>(
-                databaseId,
-                collectionId,
-                documentId,
-                data,
-                permissions
-              )
-            )
-          )
-        );
-      }
-    } catch (error) {
-      console.error(error);
-      return undefined;
-    }
-  }
-
-  public async deleteDocument(
-    collectionId: string,
-    documentId: string,
-    alternateDatabaseId?: string
-  ): Promise<Record<string, unknown> | undefined> {
-    try {
-      const databaseId = this.config?.defaultDatabase ?? alternateDatabaseId;
-      if (!databaseId) {
-        throw new Error(DATABASE_ERROR);
-      } else {
-        this.accountService.triggerAuthCheck();
-        return firstValueFrom(
-          this.databases$.pipe(
-            switchMap((db) =>
-              db.deleteDocument(databaseId, collectionId, documentId)
-            )
-          )
-        );
-      }
-    } catch (error) {
-      console.error(error);
-      return undefined;
-    }
-  }
-
   /* ----------------------------- Private Helpers ---------------------------- */
 
   private _generatePath(
     alternativeDatabaseId: string | undefined,
     collectionId: string
   ) {
-    const databaseId = this.config?.defaultDatabase ?? alternativeDatabaseId;
+    const databaseId = this._config?.defaultDatabase ?? alternativeDatabaseId;
     if (!databaseId) {
       throw new Error(
         'No Database ID provided or database not initialized, use alternateDatabaseId argument'
