@@ -1,6 +1,5 @@
 import { Injectable } from '@angular/core';
 import { ID, Models, Teams } from 'appwrite';
-import { map, of, shareReplay } from 'rxjs';
 import { AccountService } from './account.service';
 import { AppwriteConfig } from './appwrite.config';
 import { ClientService } from './client.service';
@@ -9,26 +8,15 @@ import { ClientService } from './client.service';
   providedIn: 'root',
 })
 export class TeamsService {
-  private _teams: Teams | undefined;
+  private _teams: Teams;
   config: AppwriteConfig | undefined;
-
-  private _client$ = of(this.clientService.client).pipe(shareReplay(1));
-
-  teams$ = this._client$.pipe(
-    map((client) => {
-      if (!this._teams) {
-        this._teams = new Teams(client);
-      }
-      return this._teams;
-    }),
-    shareReplay(1)
-  );
 
   constructor(
     private clientService: ClientService,
     private accountService: AccountService
   ) {
     this.config = this.clientService.config;
+    this._teams = new Teams(this.clientService.client);
   }
 
   /**
@@ -49,12 +37,7 @@ export class TeamsService {
     roles?: string[],
     teamId: string = ID.unique()
   ): Promise<Models.Team | undefined> {
-    try {
-      return this._teams?.create(teamId, name, roles);
-    } catch (error) {
-      if (error instanceof Error) console.error(error.message);
-      return undefined;
-    }
+    return this._teams?.create(teamId, name, roles);
   }
   /**
    * List Teams
@@ -71,12 +54,7 @@ export class TeamsService {
     queries?: string[] | undefined,
     search?: string | undefined
   ): Promise<Models.TeamList | undefined> {
-    try {
-      return this._teams?.list(queries, search);
-    } catch (error) {
-      if (error instanceof Error) console.error(error.message);
-      return undefined;
-    }
+    return this._teams?.list(queries, search);
   }
   /**
    * Get Team
@@ -88,12 +66,7 @@ export class TeamsService {
    * @returns {Promise}
    */
   async get(teamId: string): Promise<Models.Team | undefined> {
-    try {
-      return this._teams?.get(teamId);
-    } catch (error) {
-      if (error instanceof Error) console.error(error.message);
-      return undefined;
-    }
+    return this._teams?.get(teamId);
   }
   /**
    * Update Team
@@ -107,12 +80,7 @@ export class TeamsService {
    * @returns {Promise}
    */
   async update(teamId: string, name: string): Promise<Models.Team | undefined> {
-    try {
-      return this._teams?.update(teamId, name);
-    } catch (error) {
-      if (error instanceof Error) console.error(error.message);
-      return undefined;
-    }
+    return this._teams?.update(teamId, name);
   }
   /**
    * Delete Team
@@ -125,13 +93,8 @@ export class TeamsService {
    * @returns {Promise}
    */
   // eslint-disable-next-line @typescript-eslint/ban-types
-  async delete(teamId: string): Promise<{} | undefined> {
-    try {
-      return this._teams?.delete(teamId);
-    } catch (error) {
-      if (error instanceof Error) console.error(error.message);
-      return undefined;
-    }
+  async delete(teamId: string): Promise<{}> {
+    return this._teams.delete(teamId);
   }
   /**
    * Create Team Membership
@@ -167,12 +130,7 @@ export class TeamsService {
     url: string,
     name?: string | undefined
   ): Promise<Models.Membership | undefined> {
-    try {
-      return this._teams?.createMembership(teamId, email, roles, url, name);
-    } catch (error) {
-      if (error instanceof Error) console.error(error.message);
-      return undefined;
-    }
+    return this._teams?.createMembership(teamId, email, roles, url, name);
   }
   /**
    * List Team Memberships
@@ -191,12 +149,7 @@ export class TeamsService {
     queries?: string[] | undefined,
     search?: string | undefined
   ): Promise<Models.MembershipList | undefined> {
-    try {
-      return this._teams?.listMemberships(teamId, queries, search);
-    } catch (error) {
-      if (error instanceof Error) console.error(error.message);
-      return undefined;
-    }
+    return this._teams?.listMemberships(teamId, queries, search);
   }
   /**
    * Get Team Membership
@@ -213,12 +166,7 @@ export class TeamsService {
     teamId: string,
     membershipId: string
   ): Promise<Models.Membership | undefined> {
-    try {
-      return this._teams?.getMembership(teamId, membershipId);
-    } catch (error) {
-      if (error instanceof Error) console.error(error.message);
-      return undefined;
-    }
+    return this._teams?.getMembership(teamId, membershipId);
   }
   /**
    * Update Membership Roles
@@ -238,23 +186,23 @@ export class TeamsService {
     membershipId: string,
     roles: string[]
   ): Promise<Models.Membership | undefined> {
-    try {
-      return this._teams?.updateMembershipRoles(teamId, membershipId, roles);
-    } catch (error) {
-      if (error instanceof Error) console.error(error.message);
-      return undefined;
-    }
+    return this._teams?.updateMembershipRoles(teamId, membershipId, roles);
   }
   /**
-   * Update Membership Roles
+   * Update Team Membership Status
    *
-   * Modify the roles of a team member. Only team members with the owner role
-   * have access to this endpoint. Learn more about [roles and
-   * permissions](/docs/permissions).
+   * Use this endpoint to allow a user to accept an invitation to join a team
+   * after being redirected back to your app from the invitation email received
+   * by the user.
+   *
+   * If the request is successful, a session for the user is automatically
+   * created.
+   *
    *
    * @param {string} teamId
    * @param {string} membershipId
-   * @param {string[]} roles
+   * @param {string} userId
+   * @param {string} secret
    * @throws {AppwriteException}
    * @returns {Promise}
    */
@@ -264,17 +212,12 @@ export class TeamsService {
     userId: string,
     secret: string
   ): Promise<Models.Membership | undefined> {
-    try {
-      return this._teams?.updateMembershipStatus(
-        teamId,
-        membershipId,
-        userId,
-        secret
-      );
-    } catch (error) {
-      if (error instanceof Error) console.error(error.message);
-      return undefined;
-    }
+    return this._teams?.updateMembershipStatus(
+      teamId,
+      membershipId,
+      userId,
+      secret
+    );
   }
   /**
    * Delete Team Membership
@@ -292,12 +235,7 @@ export class TeamsService {
     teamId: string,
     membershipId: string
     // eslint-disable-next-line @typescript-eslint/ban-types
-  ): Promise<{} | undefined> {
-    try {
-      return this._teams?.deleteMembership(teamId, membershipId);
-    } catch (error) {
-      if (error instanceof Error) console.error(error.message);
-      return undefined;
-    }
+  ): Promise<{}> {
+    return this._teams?.deleteMembership(teamId, membershipId);
   }
 }
