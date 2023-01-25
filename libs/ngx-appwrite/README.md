@@ -7,7 +7,7 @@ e.g. RxJS streams where appropriate.
 ## API Reference
 
 For now please find the API reference directly at
-[appwrite.io](https://appwrite.io/docs/client/account)
+[appwrite.io](https://appwrite.io/docs)
 
 ## Installation
 
@@ -75,10 +75,17 @@ export class AppComponent {
 
 ## Currently implemented
 
-Databases
-Teams
+All APIs are now implemented. Documentation is lacking and will be updated soon. Feel free to explore in the meantime
 
-... more coming soon, hang in there
+[appwrite.io](https://appwrite.io/docs)
+
+Account,
+Avatars,
+Databases,
+Functions,
+Localization,
+Storage,
+Teams,
 
 ## License
 
