@@ -1,20 +1,32 @@
 import { Injectable } from '@angular/core';
 import { AccountService } from './account.service';
+import { AvatarsService } from './avatars.service';
 import { DatabasesService } from './databases.service';
+import { FunctionsService } from './functions.service';
+import { LocalizationService } from './localization.service';
+import { StorageService } from './storage.service';
 import { TeamsService } from './teams.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class Appwrite {
-  databases = this._databases;
-  teams = this._teams;
-  account = this._account;
+  public readonly databases = this._databases;
+  public readonly teams = this._teams;
+  public readonly account = this._account;
+  public readonly avatars = this._avatars;
+  public readonly functions = this._functions;
+  public readonly localization = this._localization;
+  public readonly storage = this._storage;
 
   constructor(
     private _databases: DatabasesService,
     private _teams: TeamsService,
-    private _account: AccountService
+    private _account: AccountService,
+    private _avatars: AvatarsService,
+    private _functions: FunctionsService,
+    private _localization: LocalizationService,
+    private _storage: StorageService
   ) {}
 
   /* -------------------------------------------------------------------------- */
