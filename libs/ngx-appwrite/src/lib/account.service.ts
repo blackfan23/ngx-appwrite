@@ -11,7 +11,6 @@ import {
   shareReplay,
   startWith,
   switchMap,
-  tap,
 } from 'rxjs';
 import { ClientService } from './client.service';
 import { watch } from './helpers';
@@ -29,7 +28,7 @@ export class AccountService {
   /* -------------------------------------------------------------------------- */
   /*                                  Reactive                                  */
   /* -------------------------------------------------------------------------- */
-  public account$: Observable<Models.Account<Models.Preferences>> =
+  private _account$: Observable<Models.Account<Models.Preferences>> =
     this._client$.pipe(
       switchMap(() => this.get()),
       shareReplay(1)
@@ -43,9 +42,8 @@ export class AccountService {
           this._checkAuth$,
         ]).pipe(
           debounceTime(10),
-          tap(() => console.log('Triggering auth')),
           switchMap(() =>
-            this.account$.pipe(
+            this._account$.pipe(
               distinctUntilKeyChanged('$id'),
               startWith(null),
               catchError((err, caught) => {

@@ -1,14 +1,15 @@
 # ngx-appwrite (WIP)
 
 A wrapper around the Appwrite WebSDK for easier implementation in Angular 13+ projects.
-The goal is to make the whole SDK accessible as well as to provide some convenience functionality
-e.g. RxJS streams where appropriate.
+The goal is to make the whole SDK accessible as well as provide some convenience functionality
+like RxJS streams where appropriate.
 
 ## API Reference
 
-For now please find the API reference directly at
+For now, you can find the API reference directly at
 [appwrite.io](https://appwrite.io/docs)
 
+---
 ## Installation
 
 Install appwrite javascript sdk with npm
@@ -22,7 +23,7 @@ Install this package
 ```bash
   npm install ngx-appwrite
 ```
-
+---
 ## Usage/Examples
 
 1 - Add the module to the app root module. Using your credentials. You can find them in the Appwrite Admin Console.
@@ -73,19 +74,60 @@ export class AppComponent {
 }
 ```
 
+---
 ## Currently implemented
-
-All APIs are now implemented. Documentation is lacking and will be updated soon. Feel free to explore in the meantime
 
 [appwrite.io](https://appwrite.io/docs)
 
-Account,
-Avatars,
-Databases,
-Functions,
-Localization,
-Storage,
-Teams,
+---
+### Account
+See [Account API](https://appwrite.io/docs/client/account)
+
+_Observe auth state_
+
+```javascript
+import { Component } from '@angular/core';
+import { Appwrite } from 'ngx-appwrite';
+
+@Component({
+  selector: 'root',
+  templateUrl: './app.component.html',
+  styleUrls: ['./app.component.scss']
+})
+export class AppComponent {
+  constructor(private appwrite: Appwrite) {}
+
+  // Monitors the current authentication state of users and fires on changes
+  // CAUTION: This may not work under all circumstances at this time.
+  auth$: Observable<null | Models.Account<Models.Preferences>> = 
+    this.appwrite.account.auth$;
+
+
+
+  triggerAuthCheck(): void {
+    // Triggers an auth check manually
+    this.appwrite.account.triggerAuthCheck()
+  }
+}
+```
+
+---
+### Avatars
+See [Avatars API](https://appwrite.io/docs/client/avatars)
+
+### Databases
+See [Databases API](https://appwrite.io/docs/client/databases)
+
+[Appwrite Realtime](https://appwrite.io/docs/realtime#channels)
+
+
+
+
+### Functions
+
+### Localization
+### Storage
+### Teams
 
 ## License
 
