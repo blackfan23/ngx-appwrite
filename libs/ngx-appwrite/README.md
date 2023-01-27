@@ -4,10 +4,6 @@ A wrapper around the Appwrite WebSDK for easier implementation in Angular 13+ pr
 The goal is to make the whole SDK accessible as well as provide some convenience functionality
 like RxJS streams where appropriate.
 
-## API Reference
-
-For now, you can find the API reference directly at
-[appwrite.io](https://appwrite.io/docs)
 
 ---
 ## Installation
@@ -75,12 +71,8 @@ export class AppComponent {
 ```
 
 ---
-## Currently implemented
 
-[appwrite.io](https://appwrite.io/docs)
-
----
-### Account
+## Account
 See [Account API](https://appwrite.io/docs/client/account)
 
 _Observe auth state_
@@ -108,26 +100,75 @@ export class AppComponent {
     // Triggers an auth check manually
     this.appwrite.account.triggerAuthCheck()
   }
+
+  blockAccount(): void {
+    // Suspend the currently logged in user account. Behind the scenes, the
+    // user's record is not deleted, but permanently blocked from any access. To
+    // completely delete a user, use the Users API instead.
+    this.appwrite.account.blockAccount()
+  }
+
+  convertAnonymousAccount(): void {
+
+    // This endpoint is a shortcut for converting an anonymous 
+    // account to a permanent one
+    this.appwrite.account
+    .convertAnonymousAccountWithEmailAndPassword('<email>', '<password>')
+
+  }
 }
 ```
 
 ---
-### Avatars
+## Avatars
 See [Avatars API](https://appwrite.io/docs/client/avatars)
 
-### Databases
-See [Databases API](https://appwrite.io/docs/client/databases)
+## Databases
+See [Databases API](https://appwrite.io/docs/client/databases) & [Appwrite Realtime](https://appwrite.io/docs/realtime#channels)
 
-[Appwrite Realtime](https://appwrite.io/docs/realtime#channels)
+```javascript
+import { Component } from '@angular/core';
+import { Appwrite } from 'ngx-appwrite';
+
+@Component({
+  selector: 'root',
+  templateUrl: './app.component.html',
+  styleUrls: ['./app.component.scss']
+})
+export class AppComponent implements OnInit {
+  constructor(private appwrite: Appwrite) {}
 
 
+  // ----------------------------------------------------------------------- 
+  //                                REALTIME                                 
+  // ----------------------------------------------------------------------- 
+  ngOnInit(): void {
+    // Monitoring a Collection
+    // Accepts Queries, however, listening to queries is done manually for now
+    // https://github.com/appwrite/appwrite/issues/2490
+    this.appwrite.databases.collection$('<collection-id>')
+    .subscribe(data => console.log(docData));
+
+    // Monitor a document
+    this.appwrite.databases.document$('<collection-id>', '<document-id>')
+    .subscribe(docData => console.log(docData))
+  }
+}
+```
 
 
-### Functions
+## Functions
+See [Functions API](https://appwrite.io/docs/client/functions)
 
-### Localization
-### Storage
-### Teams
+## Localization
+See [Localizations API](https://appwrite.io/docs/client/locale)
+
+## Storage
+See [Storage API](https://appwrite.io/docs/client/storage)
+
+## Teams
+See [Teams API](https://appwrite.io/docs/client/teams)
+
 
 ## License
 

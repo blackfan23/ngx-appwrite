@@ -1,7 +1,5 @@
 import { Injectable } from '@angular/core';
 import { ID, Models, Teams } from 'appwrite';
-import { AccountService } from './account.service';
-import { AppwriteConfig } from './appwrite.config';
 import { ClientService } from './client.service';
 
 @Injectable({
@@ -9,13 +7,8 @@ import { ClientService } from './client.service';
 })
 export class TeamsService {
   private _teams: Teams;
-  config: AppwriteConfig | undefined;
 
-  constructor(
-    private clientService: ClientService,
-    private accountService: AccountService
-  ) {
-    this.config = this.clientService.config;
+  constructor(private clientService: ClientService) {
     this._teams = new Teams(this.clientService.client);
   }
 

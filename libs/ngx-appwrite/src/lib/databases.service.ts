@@ -204,6 +204,19 @@ export class DatabasesService {
   /* --------------- https://appwrite.io/docs/realtime#channels --------------- */
   /* -------------------------------------------------------------------------- */
 
+  /**
+   * Monitor Collection
+   *
+   * Monitors real-time changes in a collection. Uses the configured default database
+   * An alternate database can be provided if needed
+   *
+   * @param {string} collectionId
+   * @param {string[]} queries
+   * @param {string | string[]} events
+   * @param {string} alternativeDatabaseId
+   * @throws {AppwriteException}
+   * @returns {Promise}
+   */
   public collection$<DocumentType>(
     collectionId: string,
     queries: string[] = [],
@@ -231,6 +244,19 @@ export class DatabasesService {
     );
   }
 
+  /**
+   * Monitor Docuemnt
+   *
+   * Monitors real-time changes in a document. Uses the configured default database
+   * An alternate database can be provided if needed
+   *
+   * @param {string} collectionId
+   * @param {string} documentId
+   * @param {string | string[]} events
+   * @param {string} alternativeDatabaseId
+   * @throws {AppwriteException}
+   * @returns {Promise}
+   */
   public document$<DocumentType>(
     collectionId: string,
     documentId: string,

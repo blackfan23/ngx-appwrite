@@ -1,7 +1,5 @@
 import { Injectable } from '@angular/core';
 import { ID, Models, Storage, UploadProgress } from 'appwrite';
-import { AccountService } from './account.service';
-import { AppwriteConfig } from './appwrite.config';
 import { ClientService } from './client.service';
 
 @Injectable({
@@ -9,13 +7,8 @@ import { ClientService } from './client.service';
 })
 export class StorageService {
   private _storage: Storage;
-  private _config: AppwriteConfig;
 
-  constructor(
-    private clientService: ClientService,
-    private accountService: AccountService
-  ) {
-    this._config = this.clientService.config;
+  constructor(private clientService: ClientService) {
     this._storage = new Storage(this.clientService.client);
   }
   /* -------------------------------- All Files ------------------------------- */
@@ -172,7 +165,7 @@ export class StorageService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  async saveFile(
+  async createFile(
     bucketId: string,
     file: File,
     fileId: string = ID.unique(),
@@ -222,7 +215,7 @@ export class StorageService {
    * @returns {Promise}
    */
   // eslint-disable-next-line @typescript-eslint/ban-types
-  async deleteFile(buckedId: string, fileId: string): Promise<{}> {
-    return this._storage.deleteFile(buckedId, fileId);
+  async deleteFile(bucketId: string, fileId: string): Promise<{}> {
+    return this._storage.deleteFile(bucketId, fileId);
   }
 }
