@@ -1,7 +1,12 @@
 {
   "name": "ngx-appwrite",
-  "version": "0.1.16",
+  "version": "0.1.17",
   "license": "MIT",
+  "keywords": [
+    "Angular",
+    "Appwrite",
+    "Typescript"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/blackfan23/ngx-appwrite"
