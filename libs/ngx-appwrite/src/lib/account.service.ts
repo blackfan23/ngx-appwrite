@@ -89,7 +89,7 @@ export class AccountService {
     name?: string,
     customId: string = ID.unique()
   ): // eslint-disable-next-line @typescript-eslint/ban-types
-  Promise<Models.Account<Models.Preferences> | undefined> {
+  Promise<Models.Account<Models.Preferences>> {
     if (!this._account) {
       return this.create(email, password, customId, name);
     }
@@ -115,7 +115,7 @@ export class AccountService {
   async createEmailSession(
     email: string,
     password: string
-  ): Promise<Models.Session | undefined> {
+  ): Promise<Models.Session> {
     if (!this._account) {
       return this.createEmailSession(email, password);
     }
