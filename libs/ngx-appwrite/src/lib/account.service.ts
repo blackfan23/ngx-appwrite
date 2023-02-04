@@ -309,9 +309,7 @@ export class AccountService {
     if (!this._account) {
       return this.createJWT();
     }
-    const session = await this._account.createJWT();
-    this.triggerAuthCheck();
-    return session;
+    return this._account.createJWT();
   }
   /**
    * Get Account
@@ -339,9 +337,7 @@ export class AccountService {
     if (!this._account) {
       return this.getPrefs();
     }
-    const session = await this._account.getPrefs();
-    this.triggerAuthCheck();
-    return session;
+    return this._account.getPrefs();
   }
   /**
    * List Sessions
@@ -356,9 +352,7 @@ export class AccountService {
     if (!this._account) {
       return this.listSessions();
     }
-    const session = await this._account.listSessions();
-    this.triggerAuthCheck();
-    return session;
+    return this._account.listSessions();
   }
   /**
    * List Logs
@@ -374,9 +368,7 @@ export class AccountService {
     if (!this._account) {
       return this.listLogs(queries);
     }
-    const session = await this._account.listLogs(queries);
-    this.triggerAuthCheck();
-    return session;
+    return this._account.listLogs(queries);
   }
   /**
    * Get Session
@@ -393,9 +385,7 @@ export class AccountService {
     if (!this._account) {
       return this.getSession(sessionId);
     }
-    const session = await this._account.getSession(sessionId);
-    this.triggerAuthCheck();
-    return session;
+    return this._account.getSession(sessionId);
   }
   /**
    * Update Name
@@ -410,9 +400,7 @@ export class AccountService {
     if (!this._account) {
       return this.updateName(name);
     }
-    const session = await this._account.updateName(name);
-    this.triggerAuthCheck();
-    return session;
+    return this._account.updateName(name);
   }
   /**
    * Update Password
@@ -433,9 +421,7 @@ export class AccountService {
     if (!this._account) {
       return this.updatePassword(name, oldPassword);
     }
-    const session = await this._account.updatePassword(name, oldPassword);
-    this.triggerAuthCheck();
-    return session;
+    return this._account.updatePassword(name, oldPassword);
   }
   /**
    * Update Email
@@ -461,9 +447,7 @@ export class AccountService {
     if (!this._account) {
       return this.updateEmail(email, password);
     }
-    const session = await this._account.updateEmail(email, password);
-    this.triggerAuthCheck();
-    return session;
+    return this._account.updateEmail(email, password);
   }
   /**
    * Update Phone
@@ -486,9 +470,7 @@ export class AccountService {
     if (!this._account) {
       return this.updatePhone(phoneNumber, password);
     }
-    const session = await this._account.updatePhone(phoneNumber, password);
-    this.triggerAuthCheck();
-    return session;
+    return this._account.updatePhone(phoneNumber, password);
   }
 
   /**
@@ -508,9 +490,7 @@ export class AccountService {
     if (!this._account) {
       return await this.updatePrefs(prefs);
     }
-    const session = this._account.updatePrefs(prefs);
-    this.triggerAuthCheck();
-    return session;
+    return this._account.updatePrefs(prefs);
   }
 
   /**
