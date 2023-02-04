@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { Appwrite } from 'ngx-appwrite';
 
 @Component({
   selector: 'ngx-temp-root',
@@ -7,4 +8,7 @@ import { Component } from '@angular/core';
 })
 export class AppComponent {
   title = 'appwrite-demo';
+  constructor(private aw: Appwrite) {
+    this.aw.account.auth$.subscribe(console.log);
+  }
 }

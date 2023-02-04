@@ -1,15 +1,15 @@
 import { Injectable } from '@angular/core';
 import { Account, ID, Models } from 'appwrite';
 import {
-  BehaviorSubject,
   catchError,
-  combineLatest,
-  debounceTime,
-  distinctUntilKeyChanged,
+  delay,
+  EMPTY,
+  merge,
   Observable,
   of,
   shareReplay,
   startWith,
+  Subject,
   switchMap,
 } from 'rxjs';
 import { ClientService } from './client.service';
@@ -22,9 +22,14 @@ export class AccountService {
   /* -------------------------------------------------------------------------- */
   /*                                    Setup                                   */
   /* -------------------------------------------------------------------------- */
-  private _checkAuth$ = new BehaviorSubject<boolean>(false);
+
   private _account!: Account;
   private _client$ = of(this.clientService.client).pipe(shareReplay(1));
+  private _watchAuthChannel$ = this._client$.pipe(
+    switchMap((client) => watch(client, 'account').pipe(startWith(null)))
+  );
+  private _triggerManualAuthCheck$ = new Subject<boolean>();
+
   /* -------------------------------------------------------------------------- */
   /*                                  Reactive                                  */
   /* -------------------------------------------------------------------------- */
@@ -34,28 +39,18 @@ export class AccountService {
       shareReplay(1)
     );
 
-  public auth$: Observable<null | Models.Account<Models.Preferences>> =
-    this._client$.pipe(
-      switchMap((client) =>
-        combineLatest([
-          watch(client, 'account').pipe(startWith(null)),
-          this._checkAuth$,
-        ]).pipe(
-          debounceTime(10),
-          switchMap(() =>
-            this._account$.pipe(
-              distinctUntilKeyChanged('$id'),
-              startWith(null),
-              catchError((err, caught) => {
-                if (err instanceof Error) console.warn(err.message);
-                return caught;
-              })
-            )
-          )
-        )
-      ),
-      shareReplay(1)
-    );
+  public auth$: Observable<null | Models.Account<Models.Preferences>> = merge(
+    this._watchAuthChannel$,
+    this._triggerManualAuthCheck$.pipe(delay(250))
+  ).pipe(
+    switchMap(() => this._checkIfAuthExists()),
+    shareReplay(1),
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    catchError((err, _caught) => {
+      if (err instanceof Error) console.warn(err.message);
+      return EMPTY;
+    })
+  );
 
   constructor(private clientService: ClientService) {
     this._account = new Account(this.clientService.client);
@@ -341,7 +336,6 @@ export class AccountService {
       return this.get();
     }
     const session = this._account.get();
-    this.triggerAuthCheck();
     return session;
   }
   /**
@@ -838,6 +832,22 @@ export class AccountService {
   }
 
   /**
+   * Logout - Shortcut for  deletesession
+   *
+   * @throws {AppwriteException}
+   * @returns {Promise}
+   */
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  logout(): Promise<{}> {
+    if (!this._account) {
+      return this.logout();
+    }
+    const session = this._account.deleteSession('current');
+    this.triggerAuthCheck();
+    return session;
+  }
+
+  /**
    * Triggering the Auth Check
    *
    * Trigger a check of all account and
@@ -846,6 +856,17 @@ export class AccountService {
    * @returns {void}
    */
   triggerAuthCheck(): void {
-    this._checkAuth$.next(true);
+    console.log('external trigger');
+    this._triggerManualAuthCheck$.next(true);
+  }
+
+  private async _checkIfAuthExists(): Promise<null | Models.Account<Models.Preferences>> {
+    try {
+      const account = await this.get();
+      return account;
+    } catch (error) {
+      console.warn(error);
+      return null;
+    }
   }
 }

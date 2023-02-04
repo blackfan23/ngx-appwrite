@@ -1,4 +1,5 @@
 import { Component, ViewEncapsulation } from '@angular/core';
+import { Appwrite } from 'ngx-appwrite';
 
 /* eslint-disable */
 
@@ -456,7 +457,8 @@ import { Component, ViewEncapsulation } from '@angular/core';
               </svg>
               <span>You&apos;re up and running</span>
             </h2>
-            <a href="#commands"> What&apos;s next? </a>
+            <a (click)="login()"> Login Test </a>
+            <a (click)="logout()"> Logout Test </a>
           </div>
           <div class="logo-container">
             <svg
@@ -843,4 +845,16 @@ nx affected:e2e</pre>
   styles: [],
   encapsulation: ViewEncapsulation.None,
 })
-export class NxWelcomeComponent {}
+export class NxWelcomeComponent {
+  constructor(private aw: Appwrite) {}
+  login() {
+    this.aw.account.createEmailSession(
+      'transferx23@googlemail.com',
+      'Xiphoid23!'
+    );
+  }
+
+  logout() {
+    this.aw.account.logout();
+  }
+}

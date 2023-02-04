@@ -1,16 +1,22 @@
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 
-import { AppComponent } from './app.component';
-import { NxWelcomeComponent } from './nx-welcome.component';
 import { RouterModule } from '@angular/router';
+import { NgxAppwriteModule } from 'ngx-appwrite';
+import { AppComponent } from './app.component';
 import { appRoutes } from './app.routes';
+import { NxWelcomeComponent } from './nx-welcome.component';
 
 @NgModule({
   declarations: [AppComponent, NxWelcomeComponent],
   imports: [
     BrowserModule,
     RouterModule.forRoot(appRoutes, { initialNavigation: 'enabledBlocking' }),
+    NgxAppwriteModule.forRoot({
+      endpoint: 'https://appwrite.nas4.us/v1',
+      project: '63b82f479fbf81bfca01',
+      defaultDatabase: '63b82f88f0730faf2b9a',
+    }),
   ],
   providers: [],
   bootstrap: [AppComponent],
