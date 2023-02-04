@@ -1,9 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Account, ID, Models } from 'appwrite';
 import {
-  catchError,
-  delay,
-  EMPTY,
+  debounceTime,
   merge,
   Observable,
   of,
@@ -33,23 +31,14 @@ export class AccountService {
   /* -------------------------------------------------------------------------- */
   /*                                  Reactive                                  */
   /* -------------------------------------------------------------------------- */
-  private _account$: Observable<Models.Account<Models.Preferences>> =
-    this._client$.pipe(
-      switchMap(() => this.get()),
-      shareReplay(1)
-    );
 
   public auth$: Observable<null | Models.Account<Models.Preferences>> = merge(
     this._watchAuthChannel$,
-    this._triggerManualAuthCheck$.pipe(delay(250))
+    this._triggerManualAuthCheck$
   ).pipe(
     switchMap(() => this._checkIfAuthExists()),
-    shareReplay(1),
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    catchError((err, _caught) => {
-      if (err instanceof Error) console.warn(err.message);
-      return EMPTY;
-    })
+    debounceTime(50),
+    shareReplay(1)
   );
 
   constructor(private clientService: ClientService) {
@@ -88,7 +77,7 @@ export class AccountService {
     if (!this._account) {
       return this.create(email, password, customId, name);
     }
-    const result = this._account.create(customId, email, password, name);
+    const result = await this._account.create(customId, email, password, name);
     this.triggerAuthCheck();
     return result;
   }
@@ -114,7 +103,7 @@ export class AccountService {
     if (!this._account) {
       return this.createEmailSession(email, password);
     }
-    const session = this._account.createEmailSession(email, password);
+    const session = await this._account.createEmailSession(email, password);
     this.triggerAuthCheck();
     return session;
   }
@@ -144,12 +133,12 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {void|string}
    */
-  async createOAuth2Session(
+  createOAuth2Session(
     provider: string,
     success?: string,
     failure?: string,
     scopes?: string[]
-  ): Promise<URL | void> {
+  ): URL | void {
     if (!this._account) {
       return this.createOAuth2Session(provider, success, failure, scopes);
     }
@@ -159,7 +148,6 @@ export class AccountService {
       failure,
       scopes
     );
-    this.triggerAuthCheck();
     return session;
   }
 
@@ -188,7 +176,7 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  createMagicURLSession(
+  async createMagicURLSession(
     email: string,
     url?: string,
     customId: string = ID.unique()
@@ -196,9 +184,7 @@ export class AccountService {
     if (!this._account) {
       return this.createMagicURLSession(customId, email, url);
     }
-    const session = this._account.createMagicURLSession(customId, email, url);
-    this.triggerAuthCheck();
-    return session;
+    return this._account.createMagicURLSession(customId, email, url);
   }
 
   /**
@@ -221,14 +207,14 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  updateMagicURLSession(
+  async updateMagicURLSession(
     userId: string,
     secret: string
   ): Promise<Models.Session> {
     if (!this._account) {
       return this.updateMagicURLSession(userId, secret);
     }
-    const session = this._account.updateMagicURLSession(userId, secret);
+    const session = await this._account.updateMagicURLSession(userId, secret);
     this.triggerAuthCheck();
     return session;
   }
@@ -251,13 +237,14 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  createPhoneSession(userId: string, phone: string): Promise<Models.Token> {
+  async createPhoneSession(
+    userId: string,
+    phone: string
+  ): Promise<Models.Token> {
     if (!this._account) {
       return this.createPhoneSession(userId, phone);
     }
-    const session = this._account.createPhoneSession(userId, phone);
-    this.triggerAuthCheck();
-    return session;
+    return this._account.createPhoneSession(userId, phone);
   }
 
   /**
@@ -274,11 +261,14 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  updatePhoneSession(userId: string, secret: string): Promise<Models.Session> {
+  async updatePhoneSession(
+    userId: string,
+    secret: string
+  ): Promise<Models.Session> {
     if (!this._account) {
       return this.updatePhoneSession(userId, secret);
     }
-    const session = this._account.updatePhoneSession(userId, secret);
+    const session = await this._account.updatePhoneSession(userId, secret);
     this.triggerAuthCheck();
     return session;
   }
@@ -295,11 +285,11 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  createAnonymousSession(): Promise<Models.Session> {
+  async createAnonymousSession(): Promise<Models.Session> {
     if (!this._account) {
       return this.createAnonymousSession();
     }
-    const session = this._account.createAnonymousSession();
+    const session = await this._account.createAnonymousSession();
     this.triggerAuthCheck();
     return session;
   }
@@ -315,11 +305,11 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  createJWT(): Promise<Models.Jwt> {
+  async createJWT(): Promise<Models.Jwt> {
     if (!this._account) {
       return this.createJWT();
     }
-    const session = this._account.createJWT();
+    const session = await this._account.createJWT();
     this.triggerAuthCheck();
     return session;
   }
@@ -335,8 +325,7 @@ export class AccountService {
     if (!this._account) {
       return this.get();
     }
-    const session = this._account.get();
-    return session;
+    return this._account.get();
   }
   /**
    * Get Account Preferences
@@ -346,11 +335,11 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  getPrefs(): Promise<Models.Preferences> {
+  async getPrefs(): Promise<Models.Preferences> {
     if (!this._account) {
       return this.getPrefs();
     }
-    const session = this._account.getPrefs();
+    const session = await this._account.getPrefs();
     this.triggerAuthCheck();
     return session;
   }
@@ -363,11 +352,11 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  listSessions(): Promise<Models.SessionList> {
+  async listSessions(): Promise<Models.SessionList> {
     if (!this._account) {
       return this.listSessions();
     }
-    const session = this._account.listSessions();
+    const session = await this._account.listSessions();
     this.triggerAuthCheck();
     return session;
   }
@@ -381,11 +370,11 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  listLogs(queries: string[] = []): Promise<Models.LogList> {
+  async listLogs(queries: string[] = []): Promise<Models.LogList> {
     if (!this._account) {
       return this.listLogs(queries);
     }
-    const session = this._account.listLogs(queries);
+    const session = await this._account.listLogs(queries);
     this.triggerAuthCheck();
     return session;
   }
@@ -400,11 +389,11 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  getSession(sessionId: string = 'current'): Promise<Models.Session> {
+  async getSession(sessionId: string = 'current'): Promise<Models.Session> {
     if (!this._account) {
       return this.getSession(sessionId);
     }
-    const session = this._account.getSession(sessionId);
+    const session = await this._account.getSession(sessionId);
     this.triggerAuthCheck();
     return session;
   }
@@ -417,11 +406,11 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  updateName(name: string): Promise<Models.Preferences> {
+  async updateName(name: string): Promise<Models.Preferences> {
     if (!this._account) {
       return this.updateName(name);
     }
-    const session = this._account.updateName(name);
+    const session = await this._account.updateName(name);
     this.triggerAuthCheck();
     return session;
   }
@@ -437,14 +426,14 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  updatePassword(
+  async updatePassword(
     name: string,
     oldPassword?: string
   ): Promise<Models.Account<Models.Preferences>> {
     if (!this._account) {
       return this.updatePassword(name, oldPassword);
     }
-    const session = this._account.updatePassword(name, oldPassword);
+    const session = await this._account.updatePassword(name, oldPassword);
     this.triggerAuthCheck();
     return session;
   }
@@ -465,14 +454,14 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  updateEmail(
+  async updateEmail(
     email: string,
     password: string
   ): Promise<Models.Account<Models.Preferences>> {
     if (!this._account) {
       return this.updateEmail(email, password);
     }
-    const session = this._account.updateEmail(email, password);
+    const session = await this._account.updateEmail(email, password);
     this.triggerAuthCheck();
     return session;
   }
@@ -490,14 +479,14 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  updatePhone(
+  async updatePhone(
     phoneNumber: string,
     password: string
   ): Promise<Models.Account<Models.Preferences>> {
     if (!this._account) {
       return this.updatePhone(phoneNumber, password);
     }
-    const session = this._account.updatePhone(phoneNumber, password);
+    const session = await this._account.updatePhone(phoneNumber, password);
     this.triggerAuthCheck();
     return session;
   }
@@ -513,11 +502,11 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  updatePrefs(
+  async updatePrefs(
     prefs: Models.Preferences
   ): Promise<Models.Account<Models.Preferences>> {
     if (!this._account) {
-      return this.updatePrefs(prefs);
+      return await this.updatePrefs(prefs);
     }
     const session = this._account.updatePrefs(prefs);
     this.triggerAuthCheck();
@@ -534,11 +523,11 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  updateStatus(): Promise<Models.Account<Models.Preferences>> {
+  async updateStatus(): Promise<Models.Account<Models.Preferences>> {
     if (!this._account) {
       return this.updateStatus();
     }
-    const session = this._account.updateStatus();
+    const session = await this._account.updateStatus();
     this.triggerAuthCheck();
     return session;
   }
@@ -562,7 +551,7 @@ export class AccountService {
     if (!this._account) {
       return this.deleteSession();
     }
-    const result = this._account.deleteSession(sessionId);
+    const result = await this._account.deleteSession(sessionId);
     this.triggerAuthCheck();
     return result;
   }
@@ -586,7 +575,7 @@ export class AccountService {
     if (!this._account) {
       return this.updateSession(sessionId);
     }
-    const result = this._account.updateSession(sessionId);
+    const result = await this._account.updateSession(sessionId);
     this.triggerAuthCheck();
     return result;
   }
@@ -605,7 +594,7 @@ export class AccountService {
     if (!this._account) {
       return this.deleteSessions();
     }
-    const result = this._account.deleteSessions();
+    const result = await this._account.deleteSessions();
     this.triggerAuthCheck();
     return result;
   }
@@ -634,7 +623,7 @@ export class AccountService {
     if (!this._account) {
       return this.createRecovery(email, url);
     }
-    const result = this._account.createRecovery(email, url);
+    const result = await this._account.createRecovery(email, url);
     this.triggerAuthCheck();
     return result;
   }
@@ -669,7 +658,7 @@ export class AccountService {
     if (!this._account) {
       return this.updateRecovery(userId, secret, password, passwordAgain);
     }
-    const result = this._account.updateRecovery(
+    const result = await this._account.updateRecovery(
       userId,
       secret,
       password,
@@ -708,7 +697,7 @@ export class AccountService {
     if (!this._account) {
       return this.createVerification(url);
     }
-    const result = this._account.createVerification(url);
+    const result = await this._account.createVerification(url);
     this.triggerAuthCheck();
     return result;
   }
@@ -733,7 +722,7 @@ export class AccountService {
     if (!this._account) {
       return this.updateVerification(userId, secret);
     }
-    const result = this._account.updateVerification(userId, secret);
+    const result = await this._account.updateVerification(userId, secret);
     this.triggerAuthCheck();
     return result;
   }
@@ -751,11 +740,11 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  createPhoneVerification(): Promise<Models.Token> {
+  async createPhoneVerification(): Promise<Models.Token> {
     if (!this._account) {
       return this.createPhoneVerification();
     }
-    const result = this._account.createPhoneVerification();
+    const result = await this._account.createPhoneVerification();
     this.triggerAuthCheck();
     return result;
   }
@@ -773,14 +762,14 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  updatePhoneVerification(
+  async updatePhoneVerification(
     userId: string,
     secret: string
   ): Promise<Models.Token> {
     if (!this._account) {
       return this.updatePhoneVerification(userId, secret);
     }
-    const result = this._account.updatePhoneVerification(userId, secret);
+    const result = await this._account.updatePhoneVerification(userId, secret);
     this.triggerAuthCheck();
     return result;
   }
@@ -800,14 +789,14 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  convertAnonymousAccountWithEmailAndPassword(
+  async convertAnonymousAccountWithEmailAndPassword(
     email: string,
     password: string
   ): Promise<Models.Account<Models.Preferences>> {
     if (!this._account) {
       return this.convertAnonymousAccountWithEmailAndPassword(email, password);
     }
-    const session = this._account.updateEmail(email, password);
+    const session = await this._account.updateEmail(email, password);
     this.triggerAuthCheck();
     return session;
   }
@@ -822,11 +811,11 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  blockAccount(): Promise<Models.Account<Models.Preferences>> {
+  async blockAccount(): Promise<Models.Account<Models.Preferences>> {
     if (!this._account) {
       return this.blockAccount();
     }
-    const session = this._account.updateStatus();
+    const session = await this._account.updateStatus();
     this.triggerAuthCheck();
     return session;
   }
@@ -838,13 +827,11 @@ export class AccountService {
    * @returns {Promise}
    */
   // eslint-disable-next-line @typescript-eslint/ban-types
-  logout(): Promise<{}> {
+  async logout(): Promise<{}> {
     if (!this._account) {
       return this.logout();
     }
-    const session = this._account.deleteSession('current');
-    this.triggerAuthCheck();
-    return session;
+    return this.deleteSession('current');
   }
 
   /**
@@ -856,14 +843,13 @@ export class AccountService {
    * @returns {void}
    */
   triggerAuthCheck(): void {
-    console.log('external trigger');
     this._triggerManualAuthCheck$.next(true);
   }
 
   private async _checkIfAuthExists(): Promise<null | Models.Account<Models.Preferences>> {
     try {
-      const account = await this.get();
-      return account;
+      const something = await this._account.get();
+      return something;
     } catch (error) {
       console.warn(error);
       return null;
