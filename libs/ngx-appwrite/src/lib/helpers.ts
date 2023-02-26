@@ -21,6 +21,7 @@ export const watch = <T>(
           }
         });
       } catch (error) {
+        console.error('Error while watching channel: ', channel);
         if (error instanceof Error) observer.error(error.message);
       }
     }

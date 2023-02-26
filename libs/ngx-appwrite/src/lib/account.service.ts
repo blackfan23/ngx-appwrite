@@ -828,8 +828,8 @@ export class AccountService {
 
   private async _checkIfAuthExists(): Promise<null | Models.Account<Models.Preferences>> {
     try {
-      const something = await this._account.get();
-      return something;
+      const session = await this._account.get();
+      return session;
     } catch (error) {
       console.warn(error);
       return null;
