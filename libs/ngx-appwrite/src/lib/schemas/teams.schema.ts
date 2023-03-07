@@ -2,8 +2,8 @@ import { z } from 'zod';
 
 export const AppwriteTeamsSchema = z.strictObject({
   $id: z.string(),
-  $createdAt: z.date(),
-  $updatedAt: z.date(),
+  $createdAt: z.string(),
+  $updatedAt: z.string(),
   name: z.string(),
   total: z.number(),
 });

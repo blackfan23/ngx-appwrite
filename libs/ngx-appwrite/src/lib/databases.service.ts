@@ -18,7 +18,7 @@ export class DatabasesService {
   private _client$ = of(this.clientService.client).pipe(shareReplay(1));
   private _config: AppwriteConfig;
 
-  databases$ = this._client$.pipe(
+  private databases$ = this._client$.pipe(
     map(() => this._databases),
     shareReplay(1)
   );

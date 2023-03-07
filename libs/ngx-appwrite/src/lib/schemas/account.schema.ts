@@ -1,18 +1,24 @@
 import { z } from 'zod';
 
-export const AppwriteAccountSchema = z.strictObject({
-  $id: z.string(),
-  $createdAt: z.date(),
-  $updatedAt: z.date(),
-  name: z.string(),
-  registration: z.date(),
-  status: z.boolean(),
-  passwordUpdate: z.date(),
-  email: z.string(),
-  phone: z.string(),
-  emailVerification: z.boolean(),
-  phoneVerification: z.boolean(),
-  prefs: z.object({}),
-});
+export const AppwriteAccountSchema = <TPrefs>(
+  prefsSchema: z.Schema<TPrefs>
+) => {
+  return z.strictObject({
+    $id: z.string(),
+    $createdAt: z.string(),
+    $updatedAt: z.string(),
+    name: z.string(),
+    registration: z.string(),
+    status: z.boolean(),
+    passwordUpdate: z.string(),
+    email: z.string(),
+    phone: z.string(),
+    emailVerification: z.boolean(),
+    phoneVerification: z.boolean(),
+    prefs: prefsSchema,
+  });
+};
 
-export type AppwriteAccountObject = z.infer<typeof AppwriteAccountSchema>;
+export type AppwriteAccountObject = z.infer<
+  ReturnType<typeof AppwriteAccountSchema>
+>;

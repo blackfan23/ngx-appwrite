@@ -60,12 +60,8 @@ export class AccountService {
     switchMap(() => this._checkIfAuthExists()),
     debounceTime(50),
     map((session) => {
-      try {
-        const accountObject = AppwriteAccountSchema.parse(session);
-        return accountObject;
-      } catch (error) {
-        throw Error('Did not get correct data from Appwrite: ');
-      }
+      const accountObject = this.clientService.prefsSchema.parse(session);
+      return accountObject;
     }),
     shareReplay(1)
   );
@@ -113,7 +109,7 @@ export class AccountService {
       name
     );
     this.triggerAuthCheck();
-    return AppwriteAccountSchema.parse(result);
+    return AppwriteAccountSchema(this.clientService.prefsSchema).parse(result);
   }
 
   /**
@@ -362,7 +358,7 @@ export class AccountService {
       return this.get();
     }
     const account = await this._account.get();
-    return AppwriteAccountSchema.parse(account);
+    return AppwriteAccountSchema(this.clientService.prefsSchema).parse(account);
   }
   /**
    * Get Account Preferences
@@ -372,11 +368,11 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  async getPrefs<TValues>(prefsSchema: z.Schema<TValues>): Promise<TValues> {
+  async getPrefs(): Promise<z.infer<typeof this.clientService.prefsSchema>> {
     if (!this._account) {
-      return this.getPrefs(prefsSchema);
+      return this.getPrefs();
     }
-    return prefsSchema.parse(this._account.getPrefs());
+    return this.clientService.prefsSchema.parse(await this._account.getPrefs());
   }
   /**
    * List Sessions
@@ -449,7 +445,9 @@ export class AccountService {
     if (!this._account) {
       return this.updateName(name);
     }
-    return AppwriteAccountSchema.parse(await this._account.updateName(name));
+    return AppwriteAccountSchema(this.clientService.prefsSchema).parse(
+      await this._account.updateName(name)
+    );
   }
   /**
    * Update Password
@@ -470,7 +468,7 @@ export class AccountService {
     if (!this._account) {
       return this.updatePassword(name, oldPassword);
     }
-    return AppwriteAccountSchema.parse(
+    return AppwriteAccountSchema(this.clientService.prefsSchema).parse(
       await this._account.updatePassword(name, oldPassword)
     );
   }
@@ -498,7 +496,7 @@ export class AccountService {
     if (!this._account) {
       return this.updateEmail(email, password);
     }
-    return AppwriteAccountSchema.parse(
+    return AppwriteAccountSchema(this.clientService.prefsSchema).parse(
       await this._account.updateEmail(email, password)
     );
   }
@@ -523,7 +521,7 @@ export class AccountService {
     if (!this._account) {
       return this.updatePhone(phoneNumber, password);
     }
-    return AppwriteAccountSchema.parse(
+    return AppwriteAccountSchema(this.clientService.prefsSchema).parse(
       await this._account.updatePhone(phoneNumber, password)
     );
   }
@@ -543,7 +541,9 @@ export class AccountService {
     if (!this._account) {
       return await this.updatePrefs(prefs);
     }
-    return AppwriteAccountSchema.parse(await this._account.updatePrefs(prefs));
+    return AppwriteAccountSchema(this.clientService.prefsSchema).parse(
+      await this._account.updatePrefs(prefs)
+    );
   }
 
   /**
@@ -562,7 +562,7 @@ export class AccountService {
     }
     const account = await this._account.updateStatus();
     this.triggerAuthCheck();
-    return AppwriteAccountSchema.parse(account);
+    return AppwriteAccountSchema(this.clientService.prefsSchema).parse(account);
   }
   /**
    * Delete Session
@@ -831,7 +831,7 @@ export class AccountService {
     }
     const account = await this._account.updateEmail(email, password);
     this.triggerAuthCheck();
-    return AppwriteAccountSchema.parse(account);
+    return AppwriteAccountSchema(this.clientService.prefsSchema).parse(account);
   }
 
   /**
@@ -850,7 +850,7 @@ export class AccountService {
     }
     const account = await this._account.updateStatus();
     this.triggerAuthCheck();
-    return AppwriteAccountSchema.parse(account);
+    return AppwriteAccountSchema(this.clientService.prefsSchema).parse(account);
   }
 
   /**

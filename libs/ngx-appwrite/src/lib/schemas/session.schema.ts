@@ -2,13 +2,13 @@ import { z } from 'zod';
 
 export const AppwriteSessionSchema = z.strictObject({
   $id: z.string(),
-  $createdAt: z.date(),
+  $createdAt: z.string(),
   userId: z.string(),
-  expire: z.date(),
+  expire: z.string(),
   provider: z.string(),
   providerUid: z.string(),
   providerAccessToken: z.string(),
-  providerAccessTokenExpiry: z.date(),
+  providerAccessTokenExpiry: z.string(),
   providerRefreshToken: z.string(),
   ip: z.string(),
   osCode: z.string(),
