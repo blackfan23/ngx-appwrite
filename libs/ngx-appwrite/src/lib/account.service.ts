@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { Account, ID, Models } from 'appwrite';
 import {
   debounceTime,
+  map,
   merge,
   Observable,
   of,
@@ -10,8 +11,28 @@ import {
   Subject,
   switchMap,
 } from 'rxjs';
+import { z } from 'zod';
 import { ClientService } from './client.service';
 import { watch } from './helpers';
+import {
+  AppwriteAccountObject,
+  AppwriteAccountSchema,
+} from './schemas/account.schema';
+import { AppwriteJWTObject, AppwriteJWTSchema } from './schemas/jwt.schema';
+import {
+  AppwriteLogListObject,
+  AppwriteLogListSchema,
+} from './schemas/logs.schema';
+import {
+  AppwriteSessionListObject,
+  AppwriteSessionListSchema,
+  AppwriteSessionObject,
+  AppwriteSessionSchema,
+} from './schemas/session.schema';
+import {
+  AppwriteTokenObject,
+  AppwriteTokenSchema,
+} from './schemas/token.schema';
 
 @Injectable({
   providedIn: 'root',
@@ -32,12 +53,20 @@ export class AccountService {
   /*                                  Reactive                                  */
   /* -------------------------------------------------------------------------- */
 
-  public auth$: Observable<null | Models.Account<Models.Preferences>> = merge(
+  public auth$: Observable<null | AppwriteAccountObject> = merge(
     this._watchAuthChannel$,
     this._triggerManualAuthCheck$
   ).pipe(
     switchMap(() => this._checkIfAuthExists()),
     debounceTime(50),
+    map((session) => {
+      try {
+        const accountObject = AppwriteAccountSchema.parse(session);
+        return accountObject;
+      } catch (error) {
+        throw Error('Did not get correct data from Appwrite: ');
+      }
+    }),
     shareReplay(1)
   );
 
@@ -73,13 +102,18 @@ export class AccountService {
     name?: string,
     customId: string = ID.unique()
   ): // eslint-disable-next-line @typescript-eslint/ban-types
-  Promise<Models.Account<Models.Preferences>> {
+  Promise<AppwriteAccountObject> {
     if (!this._account) {
       return this.create(email, password, customId, name);
     }
-    const result = await this._account.create(customId, email, password, name);
+    const result: any = await this._account.create(
+      customId,
+      email,
+      password,
+      name
+    );
     this.triggerAuthCheck();
-    return result;
+    return AppwriteAccountSchema.parse(result);
   }
 
   /**
@@ -99,13 +133,13 @@ export class AccountService {
   async createEmailSession(
     email: string,
     password: string
-  ): Promise<Models.Session> {
+  ): Promise<AppwriteSessionObject> {
     if (!this._account) {
       return this.createEmailSession(email, password);
     }
     const session = await this._account.createEmailSession(email, password);
     this.triggerAuthCheck();
-    return session;
+    return AppwriteSessionSchema.parse(session);
   }
   /**
    * Create OAuth2 Session
@@ -142,13 +176,13 @@ export class AccountService {
     if (!this._account) {
       return this.createOAuth2Session(provider, success, failure, scopes);
     }
-    const session = this._account.createOAuth2Session(
+    const url = this._account.createOAuth2Session(
       provider,
       success,
       failure,
       scopes
     );
-    return session;
+    return url;
   }
 
   /**
@@ -180,11 +214,13 @@ export class AccountService {
     email: string,
     url?: string,
     customId: string = ID.unique()
-  ): Promise<Models.Token> {
+  ): Promise<AppwriteTokenObject> {
     if (!this._account) {
       return this.createMagicURLSession(customId, email, url);
     }
-    return this._account.createMagicURLSession(customId, email, url);
+    return AppwriteTokenSchema.parse(
+      await this._account.createMagicURLSession(customId, email, url)
+    );
   }
 
   /**
@@ -210,13 +246,13 @@ export class AccountService {
   async updateMagicURLSession(
     userId: string,
     secret: string
-  ): Promise<Models.Session> {
+  ): Promise<AppwriteSessionObject> {
     if (!this._account) {
       return this.updateMagicURLSession(userId, secret);
     }
     const session = await this._account.updateMagicURLSession(userId, secret);
     this.triggerAuthCheck();
-    return session;
+    return AppwriteSessionSchema.parse(session);
   }
 
   /**
@@ -240,11 +276,13 @@ export class AccountService {
   async createPhoneSession(
     userId: string,
     phone: string
-  ): Promise<Models.Token> {
+  ): Promise<AppwriteTokenObject> {
     if (!this._account) {
       return this.createPhoneSession(userId, phone);
     }
-    return this._account.createPhoneSession(userId, phone);
+    return AppwriteTokenSchema.parse(
+      await this._account.createPhoneSession(userId, phone)
+    );
   }
 
   /**
@@ -264,13 +302,13 @@ export class AccountService {
   async updatePhoneSession(
     userId: string,
     secret: string
-  ): Promise<Models.Session> {
+  ): Promise<AppwriteSessionObject> {
     if (!this._account) {
       return this.updatePhoneSession(userId, secret);
     }
     const session = await this._account.updatePhoneSession(userId, secret);
     this.triggerAuthCheck();
-    return session;
+    return AppwriteSessionSchema.parse(session);
   }
   /**
    * Create Anonymous Session
@@ -285,13 +323,13 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  async createAnonymousSession(): Promise<Models.Session> {
+  async createAnonymousSession(): Promise<AppwriteSessionObject> {
     if (!this._account) {
       return this.createAnonymousSession();
     }
     const session = await this._account.createAnonymousSession();
     this.triggerAuthCheck();
-    return session;
+    return AppwriteSessionSchema.parse(session);
   }
   /**
    * Create JWT
@@ -305,11 +343,11 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  async createJWT(): Promise<Models.Jwt> {
+  async createJWT(): Promise<AppwriteJWTObject> {
     if (!this._account) {
       return this.createJWT();
     }
-    return this._account.createJWT();
+    return AppwriteJWTSchema.parse(await this._account.createJWT());
   }
   /**
    * Get Account
@@ -319,11 +357,12 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  get(): Promise<Models.Account<Models.Preferences>> {
+  async get(): Promise<AppwriteAccountObject> {
     if (!this._account) {
       return this.get();
     }
-    return this._account.get();
+    const account = await this._account.get();
+    return AppwriteAccountSchema.parse(account);
   }
   /**
    * Get Account Preferences
@@ -333,11 +372,11 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  async getPrefs(): Promise<Models.Preferences> {
+  async getPrefs<TValues>(prefsSchema: z.Schema<TValues>): Promise<TValues> {
     if (!this._account) {
-      return this.getPrefs();
+      return this.getPrefs(prefsSchema);
     }
-    return this._account.getPrefs();
+    return prefsSchema.parse(this._account.getPrefs());
   }
   /**
    * List Sessions
@@ -348,11 +387,12 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  async listSessions(): Promise<Models.SessionList> {
+  async listSessions(): Promise<AppwriteSessionListObject> {
     if (!this._account) {
       return this.listSessions();
     }
-    return this._account.listSessions();
+
+    return AppwriteSessionListSchema.parse(await this._account.listSessions());
   }
   /**
    * List Logs
@@ -364,11 +404,11 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  async listLogs(queries: string[] = []): Promise<Models.LogList> {
+  async listLogs(queries: string[] = []): Promise<AppwriteLogListObject> {
     if (!this._account) {
       return this.listLogs(queries);
     }
-    return this._account.listLogs(queries);
+    return AppwriteLogListSchema.parse(await this._account.listLogs(queries));
   }
   /**
    * Get Session
@@ -381,11 +421,20 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  async getSession(sessionId: string = 'current'): Promise<Models.Session> {
-    if (!this._account) {
-      return this.getSession(sessionId);
+  async getSession(
+    sessionId: string = 'current'
+  ): Promise<AppwriteSessionObject> {
+    try {
+      if (!this._account) {
+        return this.getSession(sessionId);
+      }
+      const session = await this._account.getSession(sessionId);
+      return AppwriteSessionSchema.parse(session);
+    } catch (error) {
+      throw new Error(
+        `Could not retrieve Appwrite session for id: ${sessionId} `
+      );
     }
-    return this._account.getSession(sessionId);
   }
   /**
    * Update Name
@@ -396,11 +445,11 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  async updateName(name: string): Promise<Models.Preferences> {
+  async updateName(name: string): Promise<AppwriteAccountObject> {
     if (!this._account) {
       return this.updateName(name);
     }
-    return this._account.updateName(name);
+    return AppwriteAccountSchema.parse(await this._account.updateName(name));
   }
   /**
    * Update Password
@@ -417,11 +466,13 @@ export class AccountService {
   async updatePassword(
     name: string,
     oldPassword?: string
-  ): Promise<Models.Account<Models.Preferences>> {
+  ): Promise<AppwriteAccountObject> {
     if (!this._account) {
       return this.updatePassword(name, oldPassword);
     }
-    return this._account.updatePassword(name, oldPassword);
+    return AppwriteAccountSchema.parse(
+      await this._account.updatePassword(name, oldPassword)
+    );
   }
   /**
    * Update Email
@@ -443,11 +494,13 @@ export class AccountService {
   async updateEmail(
     email: string,
     password: string
-  ): Promise<Models.Account<Models.Preferences>> {
+  ): Promise<AppwriteAccountObject> {
     if (!this._account) {
       return this.updateEmail(email, password);
     }
-    return this._account.updateEmail(email, password);
+    return AppwriteAccountSchema.parse(
+      await this._account.updateEmail(email, password)
+    );
   }
   /**
    * Update Phone
@@ -466,11 +519,13 @@ export class AccountService {
   async updatePhone(
     phoneNumber: string,
     password: string
-  ): Promise<Models.Account<Models.Preferences>> {
+  ): Promise<AppwriteAccountObject> {
     if (!this._account) {
       return this.updatePhone(phoneNumber, password);
     }
-    return this._account.updatePhone(phoneNumber, password);
+    return AppwriteAccountSchema.parse(
+      await this._account.updatePhone(phoneNumber, password)
+    );
   }
 
   /**
@@ -484,13 +539,11 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  async updatePrefs(
-    prefs: Models.Preferences
-  ): Promise<Models.Account<Models.Preferences>> {
+  async updatePrefs(prefs: Models.Preferences): Promise<AppwriteAccountObject> {
     if (!this._account) {
       return await this.updatePrefs(prefs);
     }
-    return this._account.updatePrefs(prefs);
+    return AppwriteAccountSchema.parse(await this._account.updatePrefs(prefs));
   }
 
   /**
@@ -503,13 +556,13 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  async updateStatus(): Promise<Models.Account<Models.Preferences>> {
+  async updateStatus(): Promise<AppwriteAccountObject> {
     if (!this._account) {
       return this.updateStatus();
     }
-    const session = await this._account.updateStatus();
+    const account = await this._account.updateStatus();
     this.triggerAuthCheck();
-    return session;
+    return AppwriteAccountSchema.parse(account);
   }
   /**
    * Delete Session
@@ -599,13 +652,13 @@ export class AccountService {
     email: string,
     url: string
   ): // eslint-disable-next-line @typescript-eslint/ban-types
-  Promise<Models.Token> {
+  Promise<AppwriteTokenObject> {
     if (!this._account) {
       return this.createRecovery(email, url);
     }
     const result = await this._account.createRecovery(email, url);
     this.triggerAuthCheck();
-    return result;
+    return AppwriteTokenSchema.parse(result);
   }
 
   /**
@@ -634,7 +687,7 @@ export class AccountService {
     password: string,
     passwordAgain: string
   ): // eslint-disable-next-line @typescript-eslint/ban-types
-  Promise<Models.Token> {
+  Promise<AppwriteTokenObject> {
     if (!this._account) {
       return this.updateRecovery(userId, secret, password, passwordAgain);
     }
@@ -645,7 +698,7 @@ export class AccountService {
       passwordAgain
     );
     this.triggerAuthCheck();
-    return result;
+    return AppwriteTokenSchema.parse(result);
   }
   /**
    * Create Email Verification
@@ -673,13 +726,13 @@ export class AccountService {
   async createVerification(
     url: string
   ): // eslint-disable-next-line @typescript-eslint/ban-types
-  Promise<Models.Token> {
+  Promise<AppwriteTokenObject> {
     if (!this._account) {
       return this.createVerification(url);
     }
     const result = await this._account.createVerification(url);
     this.triggerAuthCheck();
-    return result;
+    return AppwriteTokenSchema.parse(result);
   }
   /**
    * Create Email Verification (confirmation)
@@ -698,13 +751,13 @@ export class AccountService {
     userId: string,
     secret: string
   ): // eslint-disable-next-line @typescript-eslint/ban-types
-  Promise<Models.Token> {
+  Promise<AppwriteTokenObject> {
     if (!this._account) {
       return this.updateVerification(userId, secret);
     }
     const result = await this._account.updateVerification(userId, secret);
     this.triggerAuthCheck();
-    return result;
+    return AppwriteTokenSchema.parse(result);
   }
 
   /**
@@ -720,13 +773,13 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  async createPhoneVerification(): Promise<Models.Token> {
+  async createPhoneVerification(): Promise<AppwriteTokenObject> {
     if (!this._account) {
       return this.createPhoneVerification();
     }
     const result = await this._account.createPhoneVerification();
     this.triggerAuthCheck();
-    return result;
+    return AppwriteTokenSchema.parse(result);
   }
 
   /**
@@ -745,13 +798,13 @@ export class AccountService {
   async updatePhoneVerification(
     userId: string,
     secret: string
-  ): Promise<Models.Token> {
+  ): Promise<AppwriteTokenObject> {
     if (!this._account) {
       return this.updatePhoneVerification(userId, secret);
     }
     const result = await this._account.updatePhoneVerification(userId, secret);
     this.triggerAuthCheck();
-    return result;
+    return AppwriteTokenSchema.parse(result);
   }
 
   /* -------------------------------------------------------------------------- */
@@ -772,13 +825,13 @@ export class AccountService {
   async convertAnonymousAccountWithEmailAndPassword(
     email: string,
     password: string
-  ): Promise<Models.Account<Models.Preferences>> {
+  ): Promise<AppwriteAccountObject> {
     if (!this._account) {
       return this.convertAnonymousAccountWithEmailAndPassword(email, password);
     }
-    const session = await this._account.updateEmail(email, password);
+    const account = await this._account.updateEmail(email, password);
     this.triggerAuthCheck();
-    return session;
+    return AppwriteAccountSchema.parse(account);
   }
 
   /**
@@ -791,13 +844,13 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  async blockAccount(): Promise<Models.Account<Models.Preferences>> {
+  async blockAccount(): Promise<AppwriteAccountObject> {
     if (!this._account) {
       return this.blockAccount();
     }
-    const session = await this._account.updateStatus();
+    const account = await this._account.updateStatus();
     this.triggerAuthCheck();
-    return session;
+    return AppwriteAccountSchema.parse(account);
   }
 
   /**
@@ -828,8 +881,8 @@ export class AccountService {
 
   private async _checkIfAuthExists(): Promise<null | Models.Account<Models.Preferences>> {
     try {
-      const session = await this._account.get();
-      return session;
+      const account = await this._account.get();
+      return account;
     } catch (error) {
       console.warn(error);
       return null;

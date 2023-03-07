@@ -12,8 +12,9 @@
     "url": "https://github.com/blackfan23/ngx-appwrite"
   },
   "peerDependencies": {
-    "@angular/common": "^15.1.3",
-    "@angular/core": "^15.1.3"
+    "@angular/common": "^15.2.1",
+    "@angular/core": "^15.2.1",
+    "zod": "^3.21.4"
   },
   "dependencies": {
     "tslib": "^2.5.0"
