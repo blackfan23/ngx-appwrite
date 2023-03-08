@@ -4,6 +4,8 @@ A wrapper around the Appwrite WebSDK for easier implementation in Angular 13+ pr
 The goal is to make the whole SDK accessible as well as provide some convenience functionality
 like RxJS streams where appropriate.
 
+The library is opinionated and uses Zod for validation, a Zod schema must be passed to validate all data coming from the Appwrite server.
+
 
 ---
 ## Installation
@@ -12,6 +14,10 @@ Install appwrite javascript sdk with npm
 
 ```bash
   npm install appwrite
+```
+Install the Zod library
+```bash
+  npm install zod
 ```
 
 Install this package
@@ -80,6 +86,7 @@ _Observe auth state_
 ```javascript
 import { Component } from '@angular/core';
 import { Appwrite } from 'ngx-appwrite';
+import { z } from 'zod';
 
 @Component({
   selector: 'root',
@@ -89,10 +96,15 @@ import { Appwrite } from 'ngx-appwrite';
 export class AppComponent {
   constructor(private appwrite: Appwrite) {}
 
+  // a zod schema to validate the user preferences
+  private prefencesSchema = z.strictObject({
+    favoriteColor: z.string()
+  })
+
   // Monitors the current authentication state of users and fires on changes
   // CAUTION: This may not work under all circumstances at this time.
-  auth$: Observable<null | Models.Account<Models.Preferences>> = 
-    this.appwrite.account.auth$;
+  // It returns the accountObject including the user preferences
+  public auth$ = this.appwrite.account.onAuth(prefencesSchema);
 
 
 
@@ -129,6 +141,7 @@ See [Databases API](https://appwrite.io/docs/client/databases) & [Appwrite Realt
 ```javascript
 import { Component } from '@angular/core';
 import { Appwrite } from 'ngx-appwrite';
+import { z } from 'zod';
 
 @Component({
   selector: 'root',
@@ -143,14 +156,21 @@ export class AppComponent implements OnInit {
   //                                REALTIME                                 
   // ----------------------------------------------------------------------- 
   ngOnInit(): void {
+
+    // define a schema in order to validate the custom document data received from the server
+    const myDocumentSchema = z.strictObject({ 
+      username: z.string(),
+      isAdmin: z.boolean(),
+      isCool: z.boolean()
+    })
     // Monitoring a Collection
     // Accepts Queries, however, listening to queries is done manually for now
     // https://github.com/appwrite/appwrite/issues/2490
-    this.appwrite.databases.collection$('<collection-id>')
+    this.appwrite.databases.collection$('<collection-id>', myDocumentSchema)
     .subscribe(data => console.log(docData));
 
     // Monitor a document
-    this.appwrite.databases.document$('<collection-id>', '<document-id>')
+    this.appwrite.databases.document$('<collection-id>', '<document-id>', myDocumentSchema)
     .subscribe(docData => console.log(docData))
   }
 }
