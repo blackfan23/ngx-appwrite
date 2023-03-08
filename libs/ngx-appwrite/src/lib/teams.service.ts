@@ -1,7 +1,11 @@
 import { Injectable } from '@angular/core';
-import { ID, Models, Teams } from 'appwrite';
+import { ID, Teams } from 'appwrite';
 import { ClientService } from './client.service';
 import {
+  AppwriteMembershipListObject,
+  AppwriteMembershipListSchema,
+  AppwriteMembershipObject,
+  AppwriteMembershipSchema,
   AppwriteTeamListObject,
   AppwriteTeamListSchema,
   AppwriteTeamObject,
@@ -132,8 +136,10 @@ export class TeamsService {
     roles: string[],
     url: string,
     name?: string | undefined
-  ): Promise<Models.Membership | undefined> {
-    return this._teams?.createMembership(teamId, email, roles, url, name);
+  ): Promise<AppwriteMembershipObject> {
+    return AppwriteMembershipSchema.parse(
+      await this._teams?.createMembership(teamId, email, roles, url, name)
+    );
   }
   /**
    * List Team Memberships
@@ -151,8 +157,10 @@ export class TeamsService {
     teamId: string,
     queries?: string[] | undefined,
     search?: string | undefined
-  ): Promise<Models.MembershipList | undefined> {
-    return this._teams?.listMemberships(teamId, queries, search);
+  ): Promise<AppwriteMembershipListObject> {
+    return AppwriteMembershipListSchema.parse(
+      await this._teams?.listMemberships(teamId, queries, search)
+    );
   }
   /**
    * Get Team Membership
@@ -168,8 +176,10 @@ export class TeamsService {
   async getMembership(
     teamId: string,
     membershipId: string
-  ): Promise<Models.Membership | undefined> {
-    return this._teams?.getMembership(teamId, membershipId);
+  ): Promise<AppwriteMembershipObject> {
+    return AppwriteMembershipSchema.parse(
+      await this._teams?.getMembership(teamId, membershipId)
+    );
   }
   /**
    * Update Membership Roles
@@ -188,8 +198,10 @@ export class TeamsService {
     teamId: string,
     membershipId: string,
     roles: string[]
-  ): Promise<Models.Membership | undefined> {
-    return this._teams?.updateMembershipRoles(teamId, membershipId, roles);
+  ): Promise<AppwriteMembershipObject> {
+    return AppwriteMembershipSchema.parse(
+      await this._teams?.updateMembershipRoles(teamId, membershipId, roles)
+    );
   }
   /**
    * Update Team Membership Status
@@ -214,12 +226,14 @@ export class TeamsService {
     membershipId: string,
     userId: string,
     secret: string
-  ): Promise<Models.Membership | undefined> {
-    return this._teams?.updateMembershipStatus(
-      teamId,
-      membershipId,
-      userId,
-      secret
+  ): Promise<AppwriteMembershipObject> {
+    return AppwriteMembershipSchema.parse(
+      await this._teams?.updateMembershipStatus(
+        teamId,
+        membershipId,
+        userId,
+        secret
+      )
     );
   }
   /**
