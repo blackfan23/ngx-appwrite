@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { Databases, ID, Models, Query, RealtimeResponseEvent } from 'appwrite';
 import { produce } from 'immer';
 import { map, Observable, of, shareReplay, startWith, switchMap } from 'rxjs';
-import { z } from 'zod';
+import { z, ZodRawShape } from 'zod';
 import { AccountService } from './account.service';
 import { AppwriteConfig } from './appwrite.config';
 import { ClientService } from './client.service';
@@ -107,9 +107,7 @@ export class DatabasesService {
   public async getDocument<DocumentType extends z.ZodRawShape>(
     collectionId: string,
     documentId: string,
-    validationSchema: ObjectValidationType<DocumentType> = z.object(
-      {} as DocumentType
-    ),
+    validationSchema: ObjectValidationType<DocumentType>,
     alternateDatabaseId?: string
   ) {
     const databaseId = this._config?.defaultDatabase ?? alternateDatabaseId;
@@ -138,21 +136,29 @@ export class DatabasesService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  public async listDocuments<DocumentType>(
+  public async listDocuments<DocumentType extends z.ZodRawShape>(
     collectionId: string,
+    validationSchema: ObjectValidationType<DocumentType>,
     queries?: string[],
     alternateDatabaseId?: string
-  ): Promise<Models.DocumentList<DocumentType & Models.Document>> {
+  ) {
     const databaseId = this._config?.defaultDatabase ?? alternateDatabaseId;
     if (!databaseId) {
       throw new Error(DATABASE_ERROR);
     } else {
       this.accountService.triggerAuthCheck();
-      return this._databases.listDocuments<DocumentType & Models.Document>(
-        databaseId,
-        collectionId,
-        queries
-      );
+      const listedDocuments = await this._databases.listDocuments<
+        DocumentType & Models.Document
+      >(databaseId, collectionId, queries);
+
+      const validatedListedDocuments = {
+        total: listedDocuments.total,
+        documents: listedDocuments.documents.map((d) =>
+          AppwriteDocumentSchema.merge(validationSchema).parse(d)
+        ),
+      };
+
+      return validatedListedDocuments;
     }
   }
   /**
@@ -169,24 +175,27 @@ export class DatabasesService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  public async updateDocument<DocumentType>(
+  public async updateDocument<DocumentType extends ZodRawShape>(
     collectionId: string,
     documentId: string,
-    data: Omit<DocumentType & Models.Document, keyof Models.Document>,
+    data: unknown,
+    validationSchema: ObjectValidationType<DocumentType>,
     permissions?: string[],
     alternateDatabaseId?: string
-  ): Promise<(DocumentType & Models.Document) | undefined> {
+  ) {
     const databaseId = this._config?.defaultDatabase ?? alternateDatabaseId;
     if (!databaseId) {
       throw new Error(DATABASE_ERROR);
     } else {
+      const validatedData = validationSchema.parse(data) as
+        | Partial<Omit<DocumentType & Models.Document, keyof Models.Document>>
+        | undefined;
       this.accountService.triggerAuthCheck();
-      return this._databases.updateDocument<DocumentType & Models.Document>(
-        databaseId,
-        collectionId,
-        documentId,
-        data,
-        permissions
+      const updatedDocument = await this._databases.updateDocument<
+        DocumentType & Models.Document
+      >(databaseId, collectionId, documentId, validatedData, permissions);
+      return AppwriteDocumentSchema.merge(validationSchema).parse(
+        updatedDocument
       );
     }
   }

@@ -34,5 +34,21 @@ export class AppComponent {
         schema
       )
       .then((res) => console.log(res));
+
+    // this.aw.databases
+    //   .updateDocument(
+    //     '64086041caa9ac247081',
+    //     '64086041caa9ac247081',
+    //     {
+    //       firstKey: 'hello',
+    //       secondKey: random(300),
+    //     },
+    //     schema
+    //   )
+    //   .then((res) => console.log(res));
+
+    this.aw.databases
+      .listDocuments('64086041caa9ac247081', z.object({ otherkey: z.string() }))
+      .then((res) => console.log(res));
   }
 }
