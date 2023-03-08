@@ -131,6 +131,7 @@ export class DatabasesService {
    * the query params to filter your results.
    *
    * @param {string} collectionId
+   * @param {ObjectValidationType<DocumentType>} validationSchema:
    * @param {string[]} queries
    * @param {string} [alternateDatabaseId]
    * @throws {AppwriteException}
@@ -151,11 +152,11 @@ export class DatabasesService {
         DocumentType & Models.Document
       >(databaseId, collectionId, queries);
 
-      const validatedListedDocuments = {
+      const validatedListedDocuments: Models.DocumentList<Models.Document> = {
         total: listedDocuments.total,
         documents: listedDocuments.documents.map((d) =>
           AppwriteDocumentSchema.merge(validationSchema).parse(d)
-        ),
+        ) as unknown as Models.Document[],
       };
 
       return validatedListedDocuments;
@@ -248,8 +249,9 @@ export class DatabasesService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  public collection$<DocumentType>(
+  public collection$<DocumentType extends ZodRawShape>(
     collectionId: string,
+    validationSchema: ObjectValidationType<DocumentType>,
     queries: string[] = [],
     events?: string | string[],
     alternativeDatabaseId?: string
@@ -260,12 +262,12 @@ export class DatabasesService {
       collectionId
     );
     return this.databases$.pipe(
-      switchMap((databases) => {
-        return databases.listDocuments(databaseId, collectionId, queries);
+      switchMap(() => {
+        return this.listDocuments(collectionId, validationSchema, queries);
       }),
       // the original retrieved object is not extendible, which is, however, requiered in order to make an extensible document list
       switchMap((initialList: Models.DocumentList<Models.Document>) =>
-        this._collectionDataStream(path, events, initialList)
+        this._collectionDataStream(path, events, initialList, validationSchema)
       ),
       map(
         (res: Models.DocumentList<Models.Document>) =>
@@ -288,14 +290,16 @@ export class DatabasesService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  public document$<DocumentType>(
+  public document$<DocumentType extends ZodRawShape>(
     collectionId: string,
     documentId: string,
+    validationSchema: ObjectValidationType<DocumentType>,
     events?: string | string[],
     alternativeDatabaseId?: string
   ): Observable<(DocumentType & Models.Document) | null> {
     return this.collection$<DocumentType>(
       collectionId,
+      validationSchema,
       [Query.equal('$id', documentId)],
       events,
       alternativeDatabaseId
@@ -333,25 +337,30 @@ export class DatabasesService {
     return { path, databaseId };
   }
 
-  private _collectionDataStream(
+  private _collectionDataStream<DocumentType extends ZodRawShape>(
     path: string,
     events: string | string[] | undefined,
-    initialList: Models.DocumentList<Models.Document>
+    initialList: Models.DocumentList<Models.Document>,
+    documentValidationSchema: ObjectValidationType<DocumentType>
   ): Observable<Models.DocumentList<Models.Document>> {
     return this._client$.pipe(
       switchMap((client) => watch<Models.Document>(client, path, events)),
       map((res: RealtimeResponseEvent<Models.Document>) => {
         return produce(initialList, (draft) => {
+          const validatedPayload = AppwriteDocumentSchema.merge(
+            documentValidationSchema
+          ).parse(res.payload) as unknown as Models.Document;
+
           if (res.events.includes(`${path}.${res.payload.$id}.update`)) {
             this._replaceDocument(
               res.payload.$id,
               draft.documents,
-              res.payload
+              validatedPayload
             );
           }
 
           if (res.events.includes(`${path}.${res.payload.$id}.create`)) {
-            draft.documents.push(res.payload);
+            draft.documents.push(validatedPayload);
           }
 
           if (res.events.includes(`${path}.${res.payload.$id}.delete`)) {

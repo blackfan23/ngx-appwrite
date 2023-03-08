@@ -1,5 +1,4 @@
 import { Component } from '@angular/core';
-import { random } from 'lodash';
 import { Appwrite } from 'ngx-appwrite';
 import { filter } from 'rxjs';
 import { z } from 'zod';
@@ -24,16 +23,16 @@ export class AppComponent {
       secondKey: z.number(),
     });
 
-    this.aw.databases
-      .createDocument(
-        '64086041caa9ac247081',
-        {
-          firstKey: 'hello',
-          secondKey: random(300),
-        },
-        schema
-      )
-      .then((res) => console.log(res));
+    // this.aw.databases
+    //   .createDocument(
+    //     '64086041caa9ac247081',
+    //     {
+    //       firstKey: 'hello',
+    //       secondKey: random(300),
+    //     },
+    //     schema
+    //   )
+    //   .then((res) => console.log(res));
 
     // this.aw.databases
     //   .updateDocument(
@@ -47,8 +46,12 @@ export class AppComponent {
     //   )
     //   .then((res) => console.log(res));
 
+    // this.aw.databases
+    //   .listDocuments('64086041caa9ac247081', z.object({ otherkey: z.string() }))
+    //   .then((res) => console.log(res));
+
     this.aw.databases
-      .listDocuments('64086041caa9ac247081', z.object({ otherkey: z.string() }))
-      .then((res) => console.log(res));
+      .collection$('64086041caa9ac247081', schema)
+      .subscribe((res) => console.log(res[0].secondKey));
   }
 }
