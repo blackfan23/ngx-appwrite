@@ -63,7 +63,7 @@ export class AccountService {
   }
 
   onAuth<TPrefs>(
-    prefsSchema: z.Schema<TPrefs> = z.any()
+    prefsSchema: z.Schema<TPrefs>
   ): Observable<AppwriteAccountObject<TPrefs> | null> {
     if (!this._auth$) {
       this._auth$ = merge(

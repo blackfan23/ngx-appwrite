@@ -53,7 +53,7 @@ export class DatabasesService {
    
    * @param {string} collectionId
    
-   * @param {Omit<Document, keyof Models.Document>} data
+   * @param {unknown} data
    * @param {string[]} [permissions] 
    * @param {string} [documentId]
    * defaults to ID.unique()
@@ -63,10 +63,8 @@ export class DatabasesService {
    */
   public async createDocument<DocumentType extends z.ZodRawShape>(
     collectionId: string,
-    data: unknown,
-    validationSchema: ObjectValidationType<DocumentType> = z.object(
-      {} as DocumentType
-    ),
+    data: z.infer<typeof validationSchema>,
+    validationSchema: ObjectValidationType<DocumentType>,
     permissions?: string[],
     documentId: string = ID.unique(),
     alternateDatabaseId?: string
