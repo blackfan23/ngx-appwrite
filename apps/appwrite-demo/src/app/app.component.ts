@@ -52,6 +52,6 @@ export class AppComponent {
 
     this.aw.databases
       .collection$('64086041caa9ac247081', schema)
-      .subscribe((res) => console.log(res[0].secondKey));
+      .subscribe((res) => console.log(res));
   }
 }

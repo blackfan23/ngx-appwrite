@@ -1,6 +1,12 @@
 import { Injectable } from '@angular/core';
-import { ID, Models, Storage, UploadProgress } from 'appwrite';
+import { ID, Storage, UploadProgress } from 'appwrite';
 import { ClientService } from './client.service';
+import {
+  AppwriteFileListObject,
+  AppwriteFileListSchema,
+  AppwriteFileObject,
+  AppwriteFileSchema,
+} from './schemas/storage.schema';
 
 @Injectable({
   providedIn: 'root',
@@ -28,8 +34,10 @@ export class StorageService {
     buckedId: string,
     queries?: string[],
     search?: string
-  ): Promise<Models.FileList> {
-    return this._storage.listFiles(buckedId, queries, search);
+  ): Promise<AppwriteFileListObject> {
+    return AppwriteFileListSchema.parse(
+      await this._storage.listFiles(buckedId, queries, search)
+    );
   }
   /* -------------------------------- One File -------------------------------- */
   /**
@@ -43,8 +51,10 @@ export class StorageService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  async getFile(bucketId: string, fileId: string): Promise<Models.File> {
-    return this._storage.getFile(bucketId, fileId);
+  async getFile(bucketId: string, fileId: string): Promise<AppwriteFileObject> {
+    return AppwriteFileSchema.parse(
+      await this._storage.getFile(bucketId, fileId)
+    );
   }
   /**
    * Get File Preview
@@ -171,13 +181,15 @@ export class StorageService {
     fileId: string = ID.unique(),
     permissions?: string[],
     onProgress?: (progress: UploadProgress) => void
-  ): Promise<Models.File> {
-    return this._storage.createFile(
-      bucketId,
-      fileId,
-      file,
-      permissions,
-      onProgress
+  ): Promise<AppwriteFileObject> {
+    return AppwriteFileSchema.parse(
+      await this._storage.createFile(
+        bucketId,
+        fileId,
+        file,
+        permissions,
+        onProgress
+      )
     );
   }
 
@@ -198,8 +210,10 @@ export class StorageService {
     bucketId: string,
     fileId: string,
     permissions?: string[]
-  ): Promise<Models.File> {
-    return this._storage.updateFile(bucketId, fileId, permissions);
+  ): Promise<AppwriteFileObject> {
+    return AppwriteFileSchema.parse(
+      await this._storage.updateFile(bucketId, fileId, permissions)
+    );
   }
 
   /* ------------------------------- Delete File ------------------------------ */

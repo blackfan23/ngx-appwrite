@@ -14,4 +14,10 @@ export const AppwriteFileSchema = z.strictObject({
   chunksUploaded: z.number(),
 });
 
+export const AppwriteFileListSchema = z.strictObject({
+  total: z.number(),
+  files: z.array(AppwriteFileSchema),
+});
+
 export type AppwriteFileObject = z.infer<typeof AppwriteFileSchema>;
+export type AppwriteFileListObject = z.infer<typeof AppwriteFileListSchema>;

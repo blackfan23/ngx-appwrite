@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const AppwriteTeamsSchema = z.strictObject({
+export const AppwriteTeamSchema = z.strictObject({
   $id: z.string(),
   $createdAt: z.string(),
   $updatedAt: z.string(),
@@ -8,4 +8,10 @@ export const AppwriteTeamsSchema = z.strictObject({
   total: z.number(),
 });
 
-export type AppwriteTeamsObject = z.infer<typeof AppwriteTeamsSchema>;
+export const AppwriteTeamListSchema = z.strictObject({
+  total: z.number(),
+  teams: z.array(AppwriteTeamSchema),
+});
+
+export type AppwriteTeamObject = z.infer<typeof AppwriteTeamSchema>;
+export type AppwriteTeamListObject = z.infer<typeof AppwriteTeamListSchema>;

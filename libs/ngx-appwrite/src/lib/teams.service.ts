@@ -1,6 +1,12 @@
 import { Injectable } from '@angular/core';
 import { ID, Models, Teams } from 'appwrite';
 import { ClientService } from './client.service';
+import {
+  AppwriteTeamListObject,
+  AppwriteTeamListSchema,
+  AppwriteTeamObject,
+  AppwriteTeamSchema,
+} from './schemas/teams.schema';
 
 @Injectable({
   providedIn: 'root',
@@ -29,8 +35,10 @@ export class TeamsService {
     name: string,
     roles?: string[],
     teamId: string = ID.unique()
-  ): Promise<Models.Team | undefined> {
-    return this._teams?.create(teamId, name, roles);
+  ): Promise<AppwriteTeamObject> {
+    return AppwriteTeamSchema.parse(
+      await this._teams?.create(teamId, name, roles)
+    );
   }
   /**
    * List Teams
@@ -46,8 +54,10 @@ export class TeamsService {
   async list(
     queries?: string[] | undefined,
     search?: string | undefined
-  ): Promise<Models.TeamList | undefined> {
-    return this._teams?.list(queries, search);
+  ): Promise<AppwriteTeamListObject> {
+    return AppwriteTeamListSchema.parse(
+      await this._teams?.list(queries, search)
+    );
   }
   /**
    * Get Team
@@ -58,8 +68,8 @@ export class TeamsService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  async get(teamId: string): Promise<Models.Team | undefined> {
-    return this._teams?.get(teamId);
+  async get(teamId: string): Promise<AppwriteTeamObject> {
+    return AppwriteTeamSchema.parse(await this._teams?.get(teamId));
   }
   /**
    * Update Team
@@ -72,8 +82,8 @@ export class TeamsService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  async update(teamId: string, name: string): Promise<Models.Team | undefined> {
-    return this._teams?.update(teamId, name);
+  async update(teamId: string, name: string): Promise<AppwriteTeamObject> {
+    return AppwriteTeamSchema.parse(await this._teams?.update(teamId, name));
   }
   /**
    * Delete Team
