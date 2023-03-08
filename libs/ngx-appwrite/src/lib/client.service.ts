@@ -1,6 +1,5 @@
 import { Inject, Injectable } from '@angular/core';
 import { Client } from 'appwrite';
-import { z } from 'zod';
 import { AppwriteConfig, APPWRITE_CONFIG } from './appwrite.config';
 
 @Injectable({
@@ -8,7 +7,6 @@ import { AppwriteConfig, APPWRITE_CONFIG } from './appwrite.config';
 })
 export class ClientService {
   public client!: Client;
-  public prefsSchema: z.Schema;
 
   constructor(
     @Inject(APPWRITE_CONFIG)
@@ -19,7 +17,6 @@ export class ClientService {
     }
 
     this.client = this._loadClient(config);
-    this.prefsSchema = this.config.userPrefsSchema ?? z.object({});
   }
 
   private _loadClient(config: AppwriteConfig) {

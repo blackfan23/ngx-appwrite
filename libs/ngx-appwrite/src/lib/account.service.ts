@@ -49,25 +49,37 @@ export class AccountService {
   );
   private _triggerManualAuthCheck$ = new Subject<boolean>();
 
+  private _auth$: unknown | undefined;
+
   /* -------------------------------------------------------------------------- */
   /*                                  Reactive                                  */
   /* -------------------------------------------------------------------------- */
 
-  public auth$: Observable<null | AppwriteAccountObject> = merge(
-    this._watchAuthChannel$,
-    this._triggerManualAuthCheck$
-  ).pipe(
-    switchMap(() => this._checkIfAuthExists()),
-    debounceTime(50),
-    map((session) => {
-      const accountObject = this.clientService.prefsSchema.parse(session);
-      return accountObject;
-    }),
-    shareReplay(1)
-  );
+  // eslint-disable-next-line @typescript-eslint/ban-types
 
   constructor(private clientService: ClientService) {
     this._account = new Account(this.clientService.client);
+  }
+
+  onAuth<TPrefs>(
+    prefsSchema: z.Schema<TPrefs> = z.any()
+  ): Observable<AppwriteAccountObject<TPrefs> | null> {
+    if (!this._auth$) {
+      this._auth$ = merge(
+        this._watchAuthChannel$,
+        this._triggerManualAuthCheck$
+      ).pipe(
+        switchMap(() => this._checkIfAuthExists()),
+        debounceTime(50),
+        map((account) => {
+          if (!account) return null;
+          return this._parseUserPrefs<TPrefs>(account, prefsSchema);
+        }),
+        shareReplay(1)
+      );
+    }
+
+    return this._auth$ as Observable<AppwriteAccountObject<TPrefs> | null>;
   }
 
   /* -------------------------------------------------------------------------- */
@@ -92,24 +104,20 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  async create(
+  async create<TPrefs>(
     email: string,
     password: string,
     name?: string,
+    prefsSchema: z.Schema<TPrefs> = z.any(),
     customId: string = ID.unique()
   ): // eslint-disable-next-line @typescript-eslint/ban-types
-  Promise<AppwriteAccountObject> {
+  Promise<AppwriteAccountObject<TPrefs>> {
     if (!this._account) {
-      return this.create(email, password, customId, name);
+      return this.create(email, password, name, prefsSchema, customId);
     }
-    const result: any = await this._account.create(
-      customId,
-      email,
-      password,
-      name
-    );
+    const result = await this._account.create(customId, email, password, name);
     this.triggerAuthCheck();
-    return AppwriteAccountSchema(this.clientService.prefsSchema).parse(result);
+    return this._parseUserPrefs(result, prefsSchema);
   }
 
   /**
@@ -353,12 +361,14 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  async get(): Promise<AppwriteAccountObject> {
+  async get<TPrefs>(
+    schema: z.Schema<TPrefs> = z.any()
+  ): Promise<AppwriteAccountObject<TPrefs>> {
     if (!this._account) {
       return this.get();
     }
     const account = await this._account.get();
-    return AppwriteAccountSchema(this.clientService.prefsSchema).parse(account);
+    return this._parseUserPrefs(account, schema);
   }
   /**
    * Get Account Preferences
@@ -368,11 +378,13 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  async getPrefs(): Promise<z.infer<typeof this.clientService.prefsSchema>> {
+  async getPrefs<TPrefs>(
+    schema: z.Schema<TPrefs> = z.any()
+  ): Promise<z.infer<typeof schema>> {
     if (!this._account) {
       return this.getPrefs();
     }
-    return this.clientService.prefsSchema.parse(await this._account.getPrefs());
+    return schema.parse(await this._account.getPrefs());
   }
   /**
    * List Sessions
@@ -441,13 +453,15 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  async updateName(name: string): Promise<AppwriteAccountObject> {
+  async updateName<TPrefs>(
+    name: string,
+    schema: z.Schema<TPrefs> = z.any()
+  ): Promise<AppwriteAccountObject<TPrefs>> {
     if (!this._account) {
       return this.updateName(name);
     }
-    return AppwriteAccountSchema(this.clientService.prefsSchema).parse(
-      await this._account.updateName(name)
-    );
+    const res = await this._account.updateName(name);
+    return this._parseUserPrefs(res, schema);
   }
   /**
    * Update Password
@@ -461,16 +475,16 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  async updatePassword(
+  async updatePassword<TPrefs>(
     name: string,
-    oldPassword?: string
-  ): Promise<AppwriteAccountObject> {
+    oldPassword?: string,
+    schema: z.Schema<TPrefs> = z.any()
+  ): Promise<AppwriteAccountObject<TPrefs>> {
     if (!this._account) {
       return this.updatePassword(name, oldPassword);
     }
-    return AppwriteAccountSchema(this.clientService.prefsSchema).parse(
-      await this._account.updatePassword(name, oldPassword)
-    );
+    const res = await this._account.updatePassword(name, oldPassword);
+    return this._parseUserPrefs(res, schema);
   }
   /**
    * Update Email
@@ -489,16 +503,16 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  async updateEmail(
+  async updateEmail<TPrefs>(
     email: string,
-    password: string
-  ): Promise<AppwriteAccountObject> {
+    password: string,
+    schema: z.Schema<TPrefs> = z.any()
+  ): Promise<AppwriteAccountObject<TPrefs>> {
     if (!this._account) {
       return this.updateEmail(email, password);
     }
-    return AppwriteAccountSchema(this.clientService.prefsSchema).parse(
-      await this._account.updateEmail(email, password)
-    );
+    const res = await this._account.updateEmail(email, password);
+    return this._parseUserPrefs(res, schema);
   }
   /**
    * Update Phone
@@ -514,16 +528,16 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  async updatePhone(
+  async updatePhone<TPrefs>(
     phoneNumber: string,
-    password: string
-  ): Promise<AppwriteAccountObject> {
+    password: string,
+    schema: z.Schema<TPrefs> = z.any()
+  ): Promise<AppwriteAccountObject<TPrefs>> {
     if (!this._account) {
       return this.updatePhone(phoneNumber, password);
     }
-    return AppwriteAccountSchema(this.clientService.prefsSchema).parse(
-      await this._account.updatePhone(phoneNumber, password)
-    );
+    const res = await this._account.updatePhone(phoneNumber, password);
+    return this._parseUserPrefs(res, schema);
   }
 
   /**
@@ -537,13 +551,15 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  async updatePrefs(prefs: Models.Preferences): Promise<AppwriteAccountObject> {
+  async updatePrefs<TPrefs>(
+    prefs: Models.Preferences,
+    schema: z.Schema<TPrefs> = z.any()
+  ): Promise<AppwriteAccountObject<TPrefs>> {
     if (!this._account) {
       return await this.updatePrefs(prefs);
     }
-    return AppwriteAccountSchema(this.clientService.prefsSchema).parse(
-      await this._account.updatePrefs(prefs)
-    );
+    const res = await this._account.updatePrefs(prefs);
+    return this._parseUserPrefs(res, schema);
   }
 
   /**
@@ -556,13 +572,15 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  async updateStatus(): Promise<AppwriteAccountObject> {
+  async updateStatus<TPrefs>(
+    schema: z.Schema<TPrefs> = z.any()
+  ): Promise<AppwriteAccountObject<TPrefs>> {
     if (!this._account) {
       return this.updateStatus();
     }
     const account = await this._account.updateStatus();
     this.triggerAuthCheck();
-    return AppwriteAccountSchema(this.clientService.prefsSchema).parse(account);
+    return this._parseUserPrefs(account, schema);
   }
   /**
    * Delete Session
@@ -822,16 +840,17 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  async convertAnonymousAccountWithEmailAndPassword(
+  async convertAnonymousAccountWithEmailAndPassword<TPrefs>(
     email: string,
-    password: string
-  ): Promise<AppwriteAccountObject> {
+    password: string,
+    schema: z.Schema<TPrefs> = z.any()
+  ): Promise<AppwriteAccountObject<TPrefs>> {
     if (!this._account) {
       return this.convertAnonymousAccountWithEmailAndPassword(email, password);
     }
     const account = await this._account.updateEmail(email, password);
     this.triggerAuthCheck();
-    return AppwriteAccountSchema(this.clientService.prefsSchema).parse(account);
+    return this._parseUserPrefs(account, schema);
   }
 
   /**
@@ -844,13 +863,15 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  async blockAccount(): Promise<AppwriteAccountObject> {
+  async blockAccount<TPrefs>(
+    schema: z.Schema<TPrefs> = z.any()
+  ): Promise<AppwriteAccountObject<TPrefs>> {
     if (!this._account) {
       return this.blockAccount();
     }
     const account = await this._account.updateStatus();
     this.triggerAuthCheck();
-    return AppwriteAccountSchema(this.clientService.prefsSchema).parse(account);
+    return this._parseUserPrefs(account, schema);
   }
 
   /**
@@ -887,5 +908,17 @@ export class AccountService {
       console.warn(error);
       return null;
     }
+  }
+
+  private _parseUserPrefs<TPrefs>(
+    account: Models.Account<Models.Preferences>,
+    prefsSchema: z.ZodType<TPrefs, z.ZodTypeDef, TPrefs>
+  ): AppwriteAccountObject<TPrefs> {
+    const accountObject = AppwriteAccountSchema.parse(account);
+    const returnObject = {
+      ...accountObject,
+      prefs: prefsSchema.parse(accountObject.prefs),
+    };
+    return returnObject;
   }
 }
