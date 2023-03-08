@@ -1,14 +1,21 @@
+/* eslint-disable @typescript-eslint/ban-types */
 import { Injectable } from '@angular/core';
 import { Databases, ID, Models, Query, RealtimeResponseEvent } from 'appwrite';
 import { produce } from 'immer';
 import { map, Observable, of, shareReplay, startWith, switchMap } from 'rxjs';
+import { z } from 'zod';
 import { AccountService } from './account.service';
 import { AppwriteConfig } from './appwrite.config';
 import { ClientService } from './client.service';
 import { watch } from './helpers';
+import { AppwriteDocumentSchema } from './schemas/document.schema';
 
 const DATABASE_ERROR =
   'No Database ID provided or database not initialized, use alternateDatabaseId argument';
+
+type ObjectValidationType<DocumentType extends z.ZodRawShape> =
+  | z.ZodObject<DocumentType, 'strip', z.ZodTypeAny, {}, {}>
+  | z.ZodObject<DocumentType, 'strict', z.ZodTypeAny, {}, {}>;
 
 @Injectable({
   providedIn: 'root',
@@ -54,24 +61,36 @@ export class DatabasesService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  public async createDocument<DocumentType>(
+  public async createDocument<DocumentType extends z.ZodRawShape>(
     collectionId: string,
-    data: Omit<DocumentType & Models.Document, keyof Models.Document>,
+    data: unknown,
+    validationSchema: ObjectValidationType<DocumentType> = z.object(
+      {} as DocumentType
+    ),
     permissions?: string[],
     documentId: string = ID.unique(),
     alternateDatabaseId?: string
-  ): Promise<DocumentType & Models.Document> {
+  ) {
     const databaseId = this._config?.defaultDatabase ?? alternateDatabaseId;
     if (!databaseId) {
       throw new Error(DATABASE_ERROR);
     } else {
+      const validatedData = validationSchema.parse(data) as Omit<
+        DocumentType & Document,
+        keyof Document
+      >;
       this.accountService.triggerAuthCheck();
-      return this._databases.createDocument<DocumentType & Models.Document>(
-        databaseId,
-        collectionId,
-        documentId,
-        data,
-        permissions
+      const createdDocument =
+        await this._databases.createDocument<Models.Document>(
+          databaseId,
+          collectionId,
+          documentId,
+          validatedData,
+          permissions
+        );
+
+      return AppwriteDocumentSchema.merge(validationSchema).parse(
+        createdDocument
       );
     }
   }
@@ -87,23 +106,28 @@ export class DatabasesService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  public async getDocument<DocumentType>(
+  public async getDocument<DocumentType extends z.ZodRawShape>(
     collectionId: string,
-    documentId: string = ID.unique(),
+    documentId: string,
+    validationSchema: ObjectValidationType<DocumentType> = z.object(
+      {} as DocumentType
+    ),
     alternateDatabaseId?: string
-  ): Promise<DocumentType & Models.Document> {
+  ) {
     const databaseId = this._config?.defaultDatabase ?? alternateDatabaseId;
     if (!databaseId) {
       throw new Error(DATABASE_ERROR);
     } else {
       this.accountService.triggerAuthCheck();
-      return this._databases.getDocument<DocumentType & Models.Document>(
-        databaseId,
-        collectionId,
-        documentId
+      const resultingDocument = await this._databases.getDocument<
+        DocumentType & Models.Document
+      >(databaseId, collectionId, documentId);
+      return AppwriteDocumentSchema.merge(validationSchema).parse(
+        resultingDocument
       );
     }
   }
+
   /**
    * List Documents
    *

@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { Account, ID, Models } from 'appwrite';
 import {
   debounceTime,
+  distinctUntilChanged,
   map,
   merge,
   Observable,
@@ -75,6 +76,7 @@ export class AccountService {
           if (!account) return null;
           return this._parseUserPrefs<TPrefs>(account, prefsSchema);
         }),
+        distinctUntilChanged(this._deepEquals),
         shareReplay(1)
       );
     }
@@ -920,5 +922,9 @@ export class AccountService {
       prefs: prefsSchema.parse(accountObject.prefs),
     };
     return returnObject;
+  }
+
+  private _deepEquals(obj1: unknown, obj2: unknown) {
+    return JSON.stringify(obj1) === JSON.stringify(obj2);
   }
 }

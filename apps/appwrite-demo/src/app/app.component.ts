@@ -1,6 +1,8 @@
 import { Component } from '@angular/core';
+import { random } from 'lodash';
 import { Appwrite } from 'ngx-appwrite';
 import { filter } from 'rxjs';
+import { z } from 'zod';
 import { USER_DATA } from '../../test-db';
 
 @Component({
@@ -13,8 +15,24 @@ export class AppComponent {
   constructor(private aw: Appwrite) {
     this.aw.account.createEmailSession(USER_DATA.email, USER_DATA.password);
     this.aw.account
-      .onAuth()
+      .onAuth(z.object({ favoriteColor: z.string() }))
       .pipe(filter(Boolean))
       .subscribe((res) => console.log(res));
+
+    const schema = z.strictObject({
+      firstKey: z.string(),
+      secondKey: z.number(),
+    });
+
+    this.aw.databases
+      .createDocument(
+        '64086041caa9ac247081',
+        {
+          firstKey: 'hello',
+          secondKey: random(300),
+        },
+        schema
+      )
+      .then((res) => console.log(res));
   }
 }
