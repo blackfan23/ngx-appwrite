@@ -12,8 +12,9 @@ import {
   Subject,
   switchMap,
 } from 'rxjs';
-import { z } from 'zod';
+import { z, ZodRawShape } from 'zod';
 import { ClientService } from './client.service';
+import { ObjectValidationType } from './databases.service';
 import { deepEqual, watch } from './helpers';
 import {
   AppwriteAccountObject,
@@ -62,8 +63,8 @@ export class AccountService {
     this._account = new Account(this.clientService.client);
   }
 
-  onAuth<TPrefs>(
-    prefsSchema: z.Schema<TPrefs>
+  onAuth<TPrefs extends ZodRawShape>(
+    prefsSchema: ObjectValidationType<TPrefs>
   ): Observable<AppwriteAccountObject<TPrefs> | null> {
     if (!this._auth$) {
       this._auth$ = merge(
@@ -74,7 +75,7 @@ export class AccountService {
         debounceTime(50),
         map((account) => {
           if (!account) return null;
-          return this._parseUserPrefs<TPrefs>(account, prefsSchema);
+          return this._parseUserPrefs(account, prefsSchema);
         }),
         distinctUntilChanged(deepEqual),
         shareReplay(1)
@@ -100,26 +101,37 @@ export class AccountService {
    *
    * @param {string} email
    * @param {string} password
+   * @param {ObjectValidationType<TPrefs>} prefsSchema
+   * @param {Models.Preferences} defaultPrefs
    * @param {string} name
    * @param {string} customId
    * Defaults to ID.unique()
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  async create<TPrefs>(
+  async create<TPrefs extends ZodRawShape>(
     email: string,
     password: string,
+    prefsSchema: ObjectValidationType<TPrefs>,
+    defaultPrefs: Models.Preferences = {},
     name?: string,
-    prefsSchema: z.Schema<TPrefs> = z.any(),
     customId: string = ID.unique()
-  ): // eslint-disable-next-line @typescript-eslint/ban-types
-  Promise<AppwriteAccountObject<TPrefs>> {
+  ): Promise<AppwriteAccountObject<TPrefs>> {
     if (!this._account) {
-      return this.create(email, password, name, prefsSchema, customId);
+      return this.create(
+        email,
+        password,
+        prefsSchema,
+        defaultPrefs,
+        name,
+        customId
+      );
     }
-    const result = await this._account.create(customId, email, password, name);
+
+    const account = await this._account.create(customId, email, password, name);
     this.triggerAuthCheck();
-    return this._parseUserPrefs(result, prefsSchema);
+    await this.updatePrefs(defaultPrefs, prefsSchema);
+    return this._parseUserPrefs(account, prefsSchema);
   }
 
   /**
@@ -363,11 +375,11 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  async get<TPrefs>(
-    schema: z.Schema<TPrefs> = z.any()
+  async get<TPrefs extends ZodRawShape>(
+    schema: ObjectValidationType<TPrefs>
   ): Promise<AppwriteAccountObject<TPrefs>> {
     if (!this._account) {
-      return this.get();
+      return this.get(schema);
     }
     const account = await this._account.get();
     return this._parseUserPrefs(account, schema);
@@ -380,11 +392,11 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  async getPrefs<TPrefs>(
-    schema: z.Schema<TPrefs> = z.any()
+  async getPrefs<TPrefs extends ZodRawShape>(
+    schema: ObjectValidationType<TPrefs>
   ): Promise<z.infer<typeof schema>> {
     if (!this._account) {
-      return this.getPrefs();
+      return this.getPrefs(schema);
     }
     return schema.parse(await this._account.getPrefs());
   }
@@ -452,19 +464,19 @@ export class AccountService {
    * Update currently logged in user account name.
    *
    * @param {string} name
-   * @param {z.Schema<TPrefs>} schema
+   * @param {ObjectValidationType<TPrefs>} prefsSchema
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  async updateName<TPrefs>(
+  async updateName<TPrefs extends ZodRawShape>(
     name: string,
-    schema: z.Schema<TPrefs>
+    prefsSchema: ObjectValidationType<TPrefs>
   ): Promise<AppwriteAccountObject<TPrefs>> {
     if (!this._account) {
-      return this.updateName(name, schema);
+      return this.updateName(name, prefsSchema);
     }
-    const res = await this._account.updateName(name);
-    return this._parseUserPrefs(res, schema);
+    const account = await this._account.updateName(name);
+    return this._parseUserPrefs(account, prefsSchema);
   }
   /**
    * Update Password
@@ -474,21 +486,21 @@ export class AccountService {
    * OAuth, Team Invites and Magic URL, oldPassword is optional.
    *
    * @param {string} password
-   * @param {z.Schema<TPrefs>} schema
+   * @param {ObjectValidationType<TPrefs>} prefsSchema
    * @param {string} oldPassword
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  async updatePassword<TPrefs>(
+  async updatePassword<TPrefs extends ZodRawShape>(
     name: string,
-    schema: z.Schema<TPrefs>,
+    prefsSchema: ObjectValidationType<TPrefs>,
     oldPassword?: string
   ): Promise<AppwriteAccountObject<TPrefs>> {
     if (!this._account) {
-      return this.updatePassword(name, schema, oldPassword);
+      return this.updatePassword(name, prefsSchema, oldPassword);
     }
-    const res = await this._account.updatePassword(name, oldPassword);
-    return this._parseUserPrefs(res, schema);
+    const account = await this._account.updatePassword(name, oldPassword);
+    return this._parseUserPrefs(account, prefsSchema);
   }
   /**
    * Update Email
@@ -504,20 +516,20 @@ export class AccountService {
    *
    * @param {string} email
    * @param {string} password
-   * @param {z.Schema<TPrefs>} schema
+   * @param {ObjectValidationType<TPrefs>} prefsSchema
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  async updateEmail<TPrefs>(
+  async updateEmail<TPrefs extends ZodRawShape>(
     email: string,
     password: string,
-    schema: z.Schema<TPrefs>
+    prefsSchema: ObjectValidationType<TPrefs>
   ): Promise<AppwriteAccountObject<TPrefs>> {
     if (!this._account) {
-      return this.updateEmail(email, password, schema);
+      return this.updateEmail(email, password, prefsSchema);
     }
-    const res = await this._account.updateEmail(email, password);
-    return this._parseUserPrefs(res, schema);
+    const account = await this._account.updateEmail(email, password);
+    return this._parseUserPrefs(account, prefsSchema);
   }
   /**
    * Update Phone
@@ -530,20 +542,20 @@ export class AccountService {
    *
    * @param {string} phoneNumber
    * @param {string} password
-   * @param {z.Schema<TPrefs>} schema
+   * @param {ObjectValidationType<TPrefs>} prefsSchema
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  async updatePhone<TPrefs>(
+  async updatePhone<TPrefs extends ZodRawShape>(
     phoneNumber: string,
     password: string,
-    schema: z.Schema<TPrefs>
+    prefsSchema: ObjectValidationType<TPrefs>
   ): Promise<AppwriteAccountObject<TPrefs>> {
     if (!this._account) {
-      return this.updatePhone(phoneNumber, password, schema);
+      return this.updatePhone(phoneNumber, password, prefsSchema);
     }
     const res = await this._account.updatePhone(phoneNumber, password);
-    return this._parseUserPrefs(res, schema);
+    return this._parseUserPrefs(res, prefsSchema);
   }
 
   /**
@@ -554,13 +566,13 @@ export class AccountService {
    * size is 64kB and throws error if exceeded.
    *
    * @param {object} prefs
-   * @param {z.Schema<TPrefs>} schema
+   * @param {ObjectValidationType<TPrefs>} schema
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  async updatePrefs<TPrefs>(
+  async updatePrefs<TPrefs extends ZodRawShape>(
     prefs: Models.Preferences,
-    schema: z.Schema<TPrefs>
+    schema: ObjectValidationType<TPrefs>
   ): Promise<AppwriteAccountObject<TPrefs>> {
     if (!this._account) {
       return await this.updatePrefs(prefs, schema);
@@ -579,15 +591,15 @@ export class AccountService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  async updateStatus<TPrefs>(
-    schema: z.Schema<TPrefs> = z.any()
+  async updateStatus<TPrefs extends ZodRawShape>(
+    prefsSchema: ObjectValidationType<TPrefs>
   ): Promise<AppwriteAccountObject<TPrefs>> {
     if (!this._account) {
-      return this.updateStatus();
+      return this.updateStatus(prefsSchema);
     }
     const account = await this._account.updateStatus();
     this.triggerAuthCheck();
-    return this._parseUserPrefs(account, schema);
+    return this._parseUserPrefs(account, prefsSchema);
   }
   /**
    * Delete Session
@@ -844,20 +856,25 @@ export class AccountService {
    *
    * @param {string} email
    * @param {string} password
+   * @param {ObjectValidationType<TPrefs>} prefsSchema
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  async convertAnonymousAccountWithEmailAndPassword<TPrefs>(
+  async convertAnonymousAccountWithEmailAndPassword<TPrefs extends ZodRawShape>(
     email: string,
     password: string,
-    schema: z.Schema<TPrefs> = z.any()
+    prefsSchema: ObjectValidationType<TPrefs>
   ): Promise<AppwriteAccountObject<TPrefs>> {
     if (!this._account) {
-      return this.convertAnonymousAccountWithEmailAndPassword(email, password);
+      return this.convertAnonymousAccountWithEmailAndPassword(
+        email,
+        password,
+        prefsSchema
+      );
     }
     const account = await this._account.updateEmail(email, password);
     this.triggerAuthCheck();
-    return this._parseUserPrefs(account, schema);
+    return this._parseUserPrefs(account, prefsSchema);
   }
 
   /**
@@ -868,17 +885,18 @@ export class AccountService {
    * completely delete a user, use the Users API instead.
    *
    * @throws {AppwriteException}
+   * @param {ObjectValidationType<TPrefs>} prefsSchema
    * @returns {Promise}
    */
-  async blockAccount<TPrefs>(
-    schema: z.Schema<TPrefs> = z.any()
+  async blockAccount<TPrefs extends ZodRawShape>(
+    prefsSchema: ObjectValidationType<TPrefs>
   ): Promise<AppwriteAccountObject<TPrefs>> {
     if (!this._account) {
-      return this.blockAccount();
+      return this.blockAccount(prefsSchema);
     }
     const account = await this._account.updateStatus();
     this.triggerAuthCheck();
-    return this._parseUserPrefs(account, schema);
+    return this._parseUserPrefs(account, prefsSchema);
   }
 
   /**
@@ -917,15 +935,15 @@ export class AccountService {
     }
   }
 
-  private _parseUserPrefs<TPrefs>(
+  private _parseUserPrefs<TPrefs extends ZodRawShape>(
     account: Models.Account<Models.Preferences>,
-    prefsSchema: z.ZodType<TPrefs, z.ZodTypeDef, TPrefs>
+    prefsSchema: ObjectValidationType<TPrefs>
   ): AppwriteAccountObject<TPrefs> {
     const accountObject = AppwriteAccountSchema.parse(account);
     const returnObject = {
       ...accountObject,
       prefs: prefsSchema.parse(accountObject.prefs),
     };
-    return returnObject;
+    return returnObject as AppwriteAccountObject<TPrefs>;
   }
 }

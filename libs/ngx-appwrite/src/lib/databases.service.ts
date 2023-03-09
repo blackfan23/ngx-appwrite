@@ -19,7 +19,7 @@ import { AppwriteDocumentSchema } from './schemas/document.schema';
 const DATABASE_ERROR =
   'No Database ID provided or database not initialized, use alternateDatabaseId argument';
 
-type ObjectValidationType<DocumentType extends z.ZodRawShape> =
+export type ObjectValidationType<DocumentType extends z.ZodRawShape> =
   | z.ZodObject<DocumentType, 'strip', z.ZodTypeAny, {}, {}>
   | z.ZodObject<DocumentType, 'strict', z.ZodTypeAny, {}, {}>;
 
