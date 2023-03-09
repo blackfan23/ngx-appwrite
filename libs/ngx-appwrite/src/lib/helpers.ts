@@ -1,6 +1,12 @@
+/* eslint-disable @typescript-eslint/ban-types */
 import { Client, RealtimeResponseEvent } from 'appwrite';
 import { intersection } from 'lodash';
 import { Observable, Subscriber } from 'rxjs';
+import { z } from 'zod';
+
+export type ObjectValidationType<DocumentType extends z.ZodRawShape> =
+  | z.ZodObject<DocumentType, 'strip', z.ZodTypeAny, {}, {}>
+  | z.ZodObject<DocumentType, 'strict', z.ZodTypeAny, {}, {}>;
 
 export const watch = <T>(
   client: Client,

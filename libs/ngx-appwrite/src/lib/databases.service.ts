@@ -13,15 +13,11 @@ import { z, ZodRawShape } from 'zod';
 import { AccountService } from './account.service';
 import { AppwriteConfig } from './appwrite.config';
 import { ClientService } from './client.service';
-import { deepEqual, watch } from './helpers';
+import { deepEqual, ObjectValidationType, watch } from './helpers';
 import { AppwriteDocumentSchema } from './schemas/document.schema';
 
 const DATABASE_ERROR =
   'No Database ID provided or database not initialized, use alternateDatabaseId argument';
-
-export type ObjectValidationType<DocumentType extends z.ZodRawShape> =
-  | z.ZodObject<DocumentType, 'strip', z.ZodTypeAny, {}, {}>
-  | z.ZodObject<DocumentType, 'strict', z.ZodTypeAny, {}, {}>;
 
 @Injectable({
   providedIn: 'root',
