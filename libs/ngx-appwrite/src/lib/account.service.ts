@@ -14,7 +14,7 @@ import {
 } from 'rxjs';
 import { z } from 'zod';
 import { ClientService } from './client.service';
-import { watch } from './helpers';
+import { deepEqual, watch } from './helpers';
 import {
   AppwriteAccountObject,
   AppwriteAccountSchema,
@@ -76,7 +76,7 @@ export class AccountService {
           if (!account) return null;
           return this._parseUserPrefs<TPrefs>(account, prefsSchema);
         }),
-        distinctUntilChanged(this._deepEquals),
+        distinctUntilChanged(deepEqual),
         shareReplay(1)
       );
     }
@@ -922,9 +922,5 @@ export class AccountService {
       prefs: prefsSchema.parse(accountObject.prefs),
     };
     return returnObject;
-  }
-
-  private _deepEquals(obj1: unknown, obj2: unknown) {
-    return JSON.stringify(obj1) === JSON.stringify(obj2);
   }
 }

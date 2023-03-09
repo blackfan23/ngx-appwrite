@@ -1,13 +1,19 @@
 /* eslint-disable @typescript-eslint/ban-types */
 import { Injectable } from '@angular/core';
-import { Databases, ID, Models, Query, RealtimeResponseEvent } from 'appwrite';
-import { produce } from 'immer';
-import { map, Observable, of, shareReplay, startWith, switchMap } from 'rxjs';
+import { Databases, ID, Models, Query } from 'appwrite';
+import {
+  distinctUntilChanged,
+  map,
+  of,
+  shareReplay,
+  startWith,
+  switchMap,
+} from 'rxjs';
 import { z, ZodRawShape } from 'zod';
 import { AccountService } from './account.service';
 import { AppwriteConfig } from './appwrite.config';
 import { ClientService } from './client.service';
-import { watch } from './helpers';
+import { deepEqual, watch } from './helpers';
 import { AppwriteDocumentSchema } from './schemas/document.schema';
 
 const DATABASE_ERROR =
@@ -131,15 +137,15 @@ export class DatabasesService {
    * the query params to filter your results.
    *
    * @param {string} collectionId
-   * @param {ObjectValidationType<DocumentType>} validationSchema:
+   * @param {ObjectValidationType<ZodShape>} validationSchema:
    * @param {string[]} queries
    * @param {string} [alternateDatabaseId]
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  public async listDocuments<DocumentType extends z.ZodRawShape>(
+  public async listDocuments<ZodShape extends z.ZodRawShape>(
     collectionId: string,
-    validationSchema: ObjectValidationType<DocumentType>,
+    validationSchema: ObjectValidationType<ZodShape>,
     queries?: string[],
     alternateDatabaseId?: string
   ) {
@@ -149,14 +155,14 @@ export class DatabasesService {
     } else {
       this.accountService.triggerAuthCheck();
       const listedDocuments = await this._databases.listDocuments<
-        DocumentType & Models.Document
+        ZodShape & Models.Document
       >(databaseId, collectionId, queries);
 
-      const validatedListedDocuments: Models.DocumentList<Models.Document> = {
+      const validatedListedDocuments = {
         total: listedDocuments.total,
-        documents: listedDocuments.documents.map((d) =>
-          AppwriteDocumentSchema.merge(validationSchema).parse(d)
-        ) as unknown as Models.Document[],
+        documents: listedDocuments.documents.map((doc) => {
+          return AppwriteDocumentSchema.merge(validationSchema).parse(doc);
+        }),
       };
 
       return validatedListedDocuments;
@@ -249,30 +255,26 @@ export class DatabasesService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  public collection$<DocumentType extends ZodRawShape>(
+  public collection$<ZodShape extends ZodRawShape>(
     collectionId: string,
-    validationSchema: ObjectValidationType<DocumentType>,
+    validationSchema: ObjectValidationType<ZodShape>,
     queries: string[] = [],
     events?: string | string[],
     alternativeDatabaseId?: string
-  ): Observable<(DocumentType & Models.Document)[]> {
+  ) {
     // check if required data is present runtime
     const { path, databaseId } = this._generatePath(
       alternativeDatabaseId,
       collectionId
     );
-    return this.databases$.pipe(
+    return this._client$.pipe(
+      switchMap((client) => watch<Models.Document>(client, path, events)),
+      startWith(true),
       switchMap(() => {
         return this.listDocuments(collectionId, validationSchema, queries);
       }),
-      // the original retrieved object is not extendible, which is, however, requiered in order to make an extensible document list
-      switchMap((initialList: Models.DocumentList<Models.Document>) =>
-        this._collectionDataStream(path, events, initialList, validationSchema)
-      ),
-      map(
-        (res: Models.DocumentList<Models.Document>) =>
-          res.documents as (DocumentType & Models.Document)[]
-      ),
+      distinctUntilChanged((a, b) => deepEqual(a, b)),
+      map((res) => res.documents),
       shareReplay(1)
     );
   }
@@ -296,7 +298,7 @@ export class DatabasesService {
     validationSchema: ObjectValidationType<DocumentType>,
     events?: string | string[],
     alternativeDatabaseId?: string
-  ): Observable<(DocumentType & Models.Document) | null> {
+  ) {
     return this.collection$<DocumentType>(
       collectionId,
       validationSchema,
@@ -335,59 +337,5 @@ export class DatabasesService {
     // generate collection path
     const path = `databases.${databaseId}.collections.${collectionId}.documents`;
     return { path, databaseId };
-  }
-
-  private _collectionDataStream<DocumentType extends ZodRawShape>(
-    path: string,
-    events: string | string[] | undefined,
-    initialList: Models.DocumentList<Models.Document>,
-    documentValidationSchema: ObjectValidationType<DocumentType>
-  ): Observable<Models.DocumentList<Models.Document>> {
-    return this._client$.pipe(
-      switchMap((client) => watch<Models.Document>(client, path, events)),
-      map((res: RealtimeResponseEvent<Models.Document>) => {
-        return produce(initialList, (draft) => {
-          const validatedPayload = AppwriteDocumentSchema.merge(
-            documentValidationSchema
-          ).parse(res.payload) as unknown as Models.Document;
-
-          if (res.events.includes(`${path}.${res.payload.$id}.update`)) {
-            this._replaceDocument(
-              res.payload.$id,
-              draft.documents,
-              validatedPayload
-            );
-          }
-
-          if (res.events.includes(`${path}.${res.payload.$id}.create`)) {
-            draft.documents.push(validatedPayload);
-          }
-
-          if (res.events.includes(`${path}.${res.payload.$id}.delete`)) {
-            this._removeDocument(res.payload.$id, draft.documents);
-          }
-        });
-      }),
-      startWith(initialList)
-    );
-  }
-
-  private _removeDocument(
-    $id: string,
-    list: Models.Document[]
-  ): Models.Document[] {
-    const index = list.findIndex((x) => x.$id === $id);
-    list.splice(index, 1);
-    return list;
-  }
-
-  private _replaceDocument(
-    $id: string,
-    list: Models.Document[],
-    newDocument: Models.Document
-  ): Models.Document[] {
-    const index = list.findIndex((x) => x.$id === $id);
-    list[index] = newDocument;
-    return list;
   }
 }

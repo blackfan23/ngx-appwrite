@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { Query } from 'appwrite';
 import { Appwrite } from 'ngx-appwrite';
 import { filter } from 'rxjs';
 import { z } from 'zod';
@@ -46,12 +47,18 @@ export class AppComponent {
     //   )
     //   .then((res) => console.log(res));
 
-    // this.aw.databases
-    //   .listDocuments('64086041caa9ac247081', z.object({ otherkey: z.string() }))
-    //   .then((res) => console.log(res));
+    this.aw.databases
+      .listDocuments('64086041caa9ac247081', schema)
+      .then((res) => console.log(res));
 
     this.aw.databases
-      .collection$('64086041caa9ac247081', schema)
+      .document$('64086041caa9ac247081', '64086078c2a4cd184587', schema)
+      .subscribe((res) => console.log(res?.firstKey));
+
+    this.aw.databases
+      .collection$('64086041caa9ac247081', schema, [
+        Query.equal('firstKey', 'queryKey'),
+      ])
       .subscribe((res) => console.log(res));
   }
 }

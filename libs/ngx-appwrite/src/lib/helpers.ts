@@ -34,3 +34,7 @@ export const wait = (seconds: number): Promise<void> => {
     setTimeout(resolve, seconds * 1000);
   });
 };
+
+export const deepEqual = (obj1: unknown, obj2: unknown) => {
+  return JSON.stringify(obj1) === JSON.stringify(obj2);
+};
