@@ -58,7 +58,6 @@ export class DatabasesService {
    *
    
    * @param {string} collectionId
-   
    * @param {unknown} data
    * @param {string[]} [permissions] 
    * @param {string} [documentId]
@@ -67,10 +66,9 @@ export class DatabasesService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  public async createDocument<DocumentType extends z.ZodRawShape>(
+  public async createDocument(
     collectionId: string,
-    data: z.infer<typeof validationSchema>,
-    validationSchema: ObjectValidationType<DocumentType>,
+    data: Omit<Models.Document, keyof Models.Document>,
     permissions?: string[],
     documentId: string = ID.unique(),
     alternateDatabaseId?: string
@@ -79,22 +77,13 @@ export class DatabasesService {
     if (!databaseId) {
       throw new Error(DATABASE_ERROR);
     } else {
-      const validatedData = validationSchema.parse(data) as Omit<
-        DocumentType & Document,
-        keyof Document
-      >;
       this.accountService.triggerAuthCheck();
-      const createdDocument =
-        await this._databases.createDocument<Models.Document>(
-          databaseId,
-          collectionId,
-          documentId,
-          validatedData,
-          permissions
-        );
-
-      return AppwriteDocumentSchema.merge(validationSchema).parse(
-        createdDocument
+      return this._databases.createDocument(
+        databaseId,
+        collectionId,
+        documentId,
+        data,
+        permissions
       );
     }
   }
@@ -106,14 +95,15 @@ export class DatabasesService {
    *
    * @param {string} collectionId
    * @param {string} documentId
+   * @param {ObjectValidationType<ZodShape>} validationSchema
    * @param {string} [alternateDatabaseId]
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  public async getDocument<DocumentType extends z.ZodRawShape>(
+  public async getDocument<ZodShape extends z.ZodRawShape>(
     collectionId: string,
     documentId: string,
-    validationSchema: ObjectValidationType<DocumentType>,
+    validationSchema: ObjectValidationType<ZodShape>,
     alternateDatabaseId?: string
   ) {
     const databaseId = this._config?.defaultDatabase ?? alternateDatabaseId;
@@ -121,9 +111,13 @@ export class DatabasesService {
       throw new Error(DATABASE_ERROR);
     } else {
       this.accountService.triggerAuthCheck();
-      const resultingDocument = await this._databases.getDocument<
-        DocumentType & Models.Document
-      >(databaseId, collectionId, documentId);
+
+      const resultingDocument = await this._databases.getDocument(
+        databaseId,
+        collectionId,
+        documentId
+      );
+
       return AppwriteDocumentSchema.merge(validationSchema).parse(
         resultingDocument
       );
@@ -137,7 +131,7 @@ export class DatabasesService {
    * the query params to filter your results.
    *
    * @param {string} collectionId
-   * @param {ObjectValidationType<ZodShape>} validationSchema:
+   * @param {ObjectValidationType<ZodShape>} validationSchema
    * @param {string[]} queries
    * @param {string} [alternateDatabaseId]
    * @throws {AppwriteException}
@@ -174,19 +168,18 @@ export class DatabasesService {
    * Update a document by its unique ID. Using the patch method you can pass
    * only specific fields that will get updated.
    *
-   * @param {string} databaseId
    * @param {string} collectionId
    * @param {string} documentId
-   * @param {Partial<Omit<Document, keyof Models.Document>>} data
-   * @param {string[]} permissions
+   * @param {unknown} data
+   * @param {string[]} [permissions]
+   * @param {string} [alternateDatabaseId]
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  public async updateDocument<DocumentType extends ZodRawShape>(
+  public async updateDocument(
     collectionId: string,
     documentId: string,
-    data: unknown,
-    validationSchema: ObjectValidationType<DocumentType>,
+    data: Partial<Omit<Models.Document, keyof Models.Document>> | undefined,
     permissions?: string[],
     alternateDatabaseId?: string
   ) {
@@ -194,15 +187,14 @@ export class DatabasesService {
     if (!databaseId) {
       throw new Error(DATABASE_ERROR);
     } else {
-      const validatedData = validationSchema.parse(data) as
-        | Partial<Omit<DocumentType & Models.Document, keyof Models.Document>>
-        | undefined;
       this.accountService.triggerAuthCheck();
-      const updatedDocument = await this._databases.updateDocument<
-        DocumentType & Models.Document
-      >(databaseId, collectionId, documentId, validatedData, permissions);
-      return AppwriteDocumentSchema.merge(validationSchema).parse(
-        updatedDocument
+
+      return this._databases.updateDocument(
+        databaseId,
+        collectionId,
+        documentId,
+        data,
+        permissions
       );
     }
   }
@@ -212,9 +204,9 @@ export class DatabasesService {
    *
    * Delete a document by its unique ID.
    *
-   * @param {string} databaseId
    * @param {string} collectionId
    * @param {string} documentId
+   * @param {string} [alternateDatabaseId]
    * @throws {AppwriteException}
    * @returns {Promise}
    */
@@ -249,9 +241,10 @@ export class DatabasesService {
    * An alternate database can be provided if needed
    *
    * @param {string} collectionId
-   * @param {string[]} queries
-   * @param {string | string[]} events
-   * @param {string} alternativeDatabaseId
+   * @param {ObjectValidationType<ZodShape>} validationSchema
+   * @param {string[]} [queries]
+   * @param {string | string[]} [events]
+   * @param {string} [alternativeDatabaseId]
    * @throws {AppwriteException}
    * @returns {Promise}
    */
@@ -263,10 +256,7 @@ export class DatabasesService {
     alternativeDatabaseId?: string
   ) {
     // check if required data is present runtime
-    const { path, databaseId } = this._generatePath(
-      alternativeDatabaseId,
-      collectionId
-    );
+    const { path } = this._generatePath(alternativeDatabaseId, collectionId);
     return this._client$.pipe(
       switchMap((client) => watch<Models.Document>(client, path, events)),
       startWith(true),
@@ -287,8 +277,9 @@ export class DatabasesService {
    *
    * @param {string} collectionId
    * @param {string} documentId
-   * @param {string | string[]} events
-   * @param {string} alternativeDatabaseId
+   * @param {ObjectValidationType<ZodShape>} validationSchema
+   * @param {string | string[]} [events]
+   * @param {string} [alternativeDatabaseId]
    * @throws {AppwriteException}
    * @returns {Promise}
    */
@@ -312,7 +303,8 @@ export class DatabasesService {
         } else {
           return null;
         }
-      })
+      }),
+      shareReplay(1)
     );
   }
 

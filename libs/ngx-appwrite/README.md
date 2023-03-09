@@ -6,6 +6,7 @@ like RxJS streams where appropriate.
 
 The library is opinionated and uses Zod for validation, a Zod schema must be passed to validate all data coming from the Appwrite server.
 
+When writing data to the server, the document schema on the Appwrite server ensures the validity of the data. As an exception, updating user preferences requires client-side validation logic, as no schema is currently enforced by Appwrite.
 
 ---
 ## Installation
@@ -116,7 +117,7 @@ export class AppComponent {
   blockAccount(): void {
     // Suspend the currently logged in user account. Behind the scenes, the
     // user's record is not deleted, but permanently blocked from any access. To
-    // completely delete a user, use the Users API instead.
+    // completely delete a user, use the Users API (server-side) instead.
     this.appwrite.account.blockAccount()
   }
 
@@ -126,7 +127,6 @@ export class AppComponent {
     // account to a permanent one
     this.appwrite.account
     .convertAnonymousAccountWithEmailAndPassword('<email>', '<password>')
-
   }
 }
 ```
@@ -167,11 +167,19 @@ export class AppComponent implements OnInit {
     // Accepts Queries, however, listening to queries is done manually for now
     // https://github.com/appwrite/appwrite/issues/2490
     this.appwrite.databases.collection$('<collection-id>', myDocumentSchema)
-    .subscribe(data => console.log(docData));
+    .subscribe(docData => {
+      // return type will be 
+      // z.infer<typeof myDocumentSchema> & Models.Document
+      console.log(docData)
+    });
 
     // Monitor a document
     this.appwrite.databases.document$('<collection-id>', '<document-id>', myDocumentSchema)
-    .subscribe(docData => console.log(docData))
+    .subscribe(docData => {
+      // return type will be 
+      // z.infer<typeof myDocumentSchema> & Models.Document
+      console.log(docData)}
+    )
   }
 }
 ```

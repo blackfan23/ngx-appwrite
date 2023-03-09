@@ -452,15 +452,16 @@ export class AccountService {
    * Update currently logged in user account name.
    *
    * @param {string} name
+   * @param {z.Schema<TPrefs>} schema
    * @throws {AppwriteException}
    * @returns {Promise}
    */
   async updateName<TPrefs>(
     name: string,
-    schema: z.Schema<TPrefs> = z.any()
+    schema: z.Schema<TPrefs>
   ): Promise<AppwriteAccountObject<TPrefs>> {
     if (!this._account) {
-      return this.updateName(name);
+      return this.updateName(name, schema);
     }
     const res = await this._account.updateName(name);
     return this._parseUserPrefs(res, schema);
@@ -473,17 +474,18 @@ export class AccountService {
    * OAuth, Team Invites and Magic URL, oldPassword is optional.
    *
    * @param {string} password
+   * @param {z.Schema<TPrefs>} schema
    * @param {string} oldPassword
    * @throws {AppwriteException}
    * @returns {Promise}
    */
   async updatePassword<TPrefs>(
     name: string,
-    oldPassword?: string,
-    schema: z.Schema<TPrefs> = z.any()
+    schema: z.Schema<TPrefs>,
+    oldPassword?: string
   ): Promise<AppwriteAccountObject<TPrefs>> {
     if (!this._account) {
-      return this.updatePassword(name, oldPassword);
+      return this.updatePassword(name, schema, oldPassword);
     }
     const res = await this._account.updatePassword(name, oldPassword);
     return this._parseUserPrefs(res, schema);
@@ -502,16 +504,17 @@ export class AccountService {
    *
    * @param {string} email
    * @param {string} password
+   * @param {z.Schema<TPrefs>} schema
    * @throws {AppwriteException}
    * @returns {Promise}
    */
   async updateEmail<TPrefs>(
     email: string,
     password: string,
-    schema: z.Schema<TPrefs> = z.any()
+    schema: z.Schema<TPrefs>
   ): Promise<AppwriteAccountObject<TPrefs>> {
     if (!this._account) {
-      return this.updateEmail(email, password);
+      return this.updateEmail(email, password, schema);
     }
     const res = await this._account.updateEmail(email, password);
     return this._parseUserPrefs(res, schema);
@@ -525,18 +528,19 @@ export class AccountService {
    * /account/verification/phone](/docs/client/account#accountCreatePhoneVerification)
    * endpoint to send a confirmation SMS.
    *
-   * @param {string} phone
+   * @param {string} phoneNumber
    * @param {string} password
+   * @param {z.Schema<TPrefs>} schema
    * @throws {AppwriteException}
    * @returns {Promise}
    */
   async updatePhone<TPrefs>(
     phoneNumber: string,
     password: string,
-    schema: z.Schema<TPrefs> = z.any()
+    schema: z.Schema<TPrefs>
   ): Promise<AppwriteAccountObject<TPrefs>> {
     if (!this._account) {
-      return this.updatePhone(phoneNumber, password);
+      return this.updatePhone(phoneNumber, password, schema);
     }
     const res = await this._account.updatePhone(phoneNumber, password);
     return this._parseUserPrefs(res, schema);
@@ -550,15 +554,16 @@ export class AccountService {
    * size is 64kB and throws error if exceeded.
    *
    * @param {object} prefs
+   * @param {z.Schema<TPrefs>} schema
    * @throws {AppwriteException}
    * @returns {Promise}
    */
   async updatePrefs<TPrefs>(
     prefs: Models.Preferences,
-    schema: z.Schema<TPrefs> = z.any()
+    schema: z.Schema<TPrefs>
   ): Promise<AppwriteAccountObject<TPrefs>> {
     if (!this._account) {
-      return await this.updatePrefs(prefs);
+      return await this.updatePrefs(prefs, schema);
     }
     const res = await this._account.updatePrefs(prefs);
     return this._parseUserPrefs(res, schema);
