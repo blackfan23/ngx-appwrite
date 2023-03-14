@@ -30,7 +30,7 @@ export const AppwriteMembershipSchema = z.strictObject({
 
 export const AppwriteMembershipListSchema = z.strictObject({
   total: z.number(),
-  teams: z.array(AppwriteMembershipSchema),
+  memberships: z.array(AppwriteMembershipSchema),
 });
 
 export type AppwriteTeamObject = z.infer<typeof AppwriteTeamSchema>;

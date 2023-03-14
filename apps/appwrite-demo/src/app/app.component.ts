@@ -21,7 +21,10 @@ export class AppComponent {
       .subscribe((res) => console.log(res));
 
     setTimeout(() => {
-      this.aw.account.updateName(`Mark Madlock ${random(100)}`, prefsSchema);
+      const res = this.aw.account.updateName(
+        `Mark Madlock ${random(100)}`,
+        prefsSchema
+      );
     }, 2000);
 
     const schema = z.strictObject({
