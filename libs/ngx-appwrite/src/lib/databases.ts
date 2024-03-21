@@ -49,7 +49,7 @@ export class Databases {
    */
   public async createDocument<DocumentShape extends Record<string, unknown>>(
     collectionId: string,
-    data: DocumentShape,
+    data: Partial<DocumentShape>,
     permissions?: string[],
     documentId: string = ID.unique(),
     alternateDatabaseId?: string,

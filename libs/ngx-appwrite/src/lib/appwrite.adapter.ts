@@ -28,7 +28,7 @@ export abstract class AppwriteAdapter {
    * @returns {Promise<DocumentShape>}
    */
   public async create<DocumentShape extends Models.Document>(
-    awDocument: DocumentShape,
+    awDocument: Partial<DocumentShape>,
     permissions: string[] = [],
     alternativeDatabaseId?: string,
   ): Promise<DocumentShape> {

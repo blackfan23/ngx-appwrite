@@ -41,6 +41,10 @@ export class AppComponent implements OnInit {
       );
     });
 
+    const created = await this.friendsService.create<Friend>({
+      name: 'heelo',
+    });
+
     // const updated = await this.friendsService.upsert<Friend>({
     //   $id: ID.unique(),
     //   name: 'John Doe',
