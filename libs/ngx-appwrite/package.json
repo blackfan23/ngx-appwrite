@@ -1,5 +1,6 @@
 {
   "name": "ngx-appwrite",
+  "author": "Julius Pargac <transferx23@googlemail.com>",
   "version": "1.5.0",
   "peerDependencies": {
     "@angular/common": "^17.3.1",
@@ -9,5 +10,19 @@
   "dependencies": {
     "tslib": "^2.6.2"
   },
-  "sideEffects": false
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/blackfan23/ngx-appwrite.git"
+  },
+  "keywords": [
+    "Appwrite",
+    "Angular",
+    "Standalone",
+    "Library"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/blackfan23/ngx-appwrite/issues"
+  }
 }

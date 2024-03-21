@@ -8,7 +8,7 @@
     "build": "nx build",
     "test": "nx test",
     "release:patch": "cd ./libs/ngx-appwrite && npm version patch && cd .. && cd .. && nx build ngx-appwrite --prod && cd ./dist/libs/ngx-appwrite && npm publish",
-    "release:private:patch": "cd ./libs/ngx-appwrite-new && npm version patch && cd .. && cd .. && nx build ngx-appwrite-new --prod && cd ./dist/libs/ngx-appwrite-new && npm publish"
+    "release:no-patch": "cd ./libs/ngx-appwrite && cd .. && cd .. && nx build ngx-appwrite --prod && cd ./dist/libs/ngx-appwrite && npm publish"
   },
   "private": true,
   "dependencies": {
