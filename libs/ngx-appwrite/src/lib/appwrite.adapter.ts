@@ -194,6 +194,7 @@ export abstract class AppwriteAdapter {
           if (this.validationFn) {
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             list.documents = list.documents.map((item) =>
+              // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
               this.validationFn!<DocumentShape>(item),
             );
           }

@@ -1,22 +1,18 @@
-# ngx-appwrite (WIP)
+# ngx-appwrite
 
-A wrapper around the Appwrite WebSDK for easier implementation in Angular 13+ projects.
+A wrapper around the Appwrite WebSDK for easier implementation in Angular 17+ projects.
 The goal is to make the whole SDK accessible as well as provide some convenience functionality
 like RxJS streams where appropriate.
 
-The library is opinionated and uses Zod for validation, a Zod schema must be passed to validate all data coming from the Appwrite server.
-
 ---
 
+## Compatibility
+
+| ngx-appwrite | Appwrite-SDK | Angular |
+| ------------ | ------------ | ------- |
+| 1.5.\*       | 1.5.\*       | 16+     |
+
 ## Installation
-
-Install appwrite javascript sdk with npm
-
-```bash
-  npm install appwrite
-```
-
-Install this package
 
 ```bash
   npm install ngx-appwrite
@@ -26,173 +22,163 @@ Install this package
 
 ## Usage/Examples
 
-1 - Add the module to the app root module. Using your credentials. You can find them in the Appwrite Admin Console.
+1 - The package is using an Angular standalone configuration.
 
 ```javascript
-import { NgModule } from '@angular/core';
-import { BrowserModule } from '@angular/platform-browser';
+// app.config.ts
+import { ApplicationConfig } from '@angular/core';
+import { provideAppwrite } from 'ngx-appwrite';
+import { SECRETS } from '../secrets.env';
 
-import { RouterModule } from '@angular/router';
-import { NgxAppwriteModule } from 'ngx-appwrite';
-import { AppComponent } from './app.component';
-import { appRoutes } from './app.routes';
 
-@NgModule({
-  declarations: [AppComponent],
-  imports: [
-    BrowserModule,
-    RouterModule.forRoot(appRoutes, { initialNavigation: 'enabledBlocking' }),
-    NgxAppwriteModule.forRoot({
-      endpoint: 'https://appwrite.mydomain.eg',
-      project: '<projectID>',
-      defaultDatabase: '<defaultDatabaseID>',
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideAppwrite({
+      endpoint: SECRETS.SERVER_URL,
+      project: SECRETS.PROJECT_ID,
+      defaultDatabase: SECRETS.DEFAULT_DATABASE,
     }),
   ],
-  providers: [],
-  bootstrap: [AppComponent],
-})
-export class AppModule {}
+};
 ```
 
-2 - Example: Use the appwrite service to access the SDK
+2 - Alternative A: Use the appwrite services to access the SDK
 
 ```javascript
-import { Component } from '@angular/core';
-import { Appwrite } from 'ngx-appwrite';
+import { Component, OnInit, inject } from '@angular/core';
+import { Account } from 'ngx-appwrite';
 
 @Component({
-  selector: 'root',
+  standalone: true,
+  imports: [],
+  selector: 'app-root',
   templateUrl: './app.component.html',
-  styleUrls: ['./app.component.scss']
-})
-export class AppComponent {
-  constructor(private appwrite: Appwrite) {}
-
-  async addDocument(data: Record<string, unknown>): Promise<void> {
-    return this.appwrite.databases.createDocument('<collectionID>', data);
-  }
-}
-```
-
----
-
-## Account
-
-See [Account API](https://appwrite.io/docs/client/account)
-
-_Observe auth state_
-
-```javascript
-import { Component } from '@angular/core';
-import { Appwrite } from 'ngx-appwrite';
-import { z } from 'zod';
-
-@Component({
-  selector: 'root',
-  templateUrl: './app.component.html',
-  styleUrls: ['./app.component.scss']
-})
-export class AppComponent {
-  constructor(private appwrite: Appwrite) {}
-
-  // a zod schema to validate the user preferences
-  private prefencesSchema = z.strictObject({
-    favoriteColor: z.string()
-  })
-
-  // Monitors the current authentication state of users and fires on changes
-  // CAUTION: This may not work under all circumstances at this time.
-  // It returns the accountObject including the user preferences
-  public auth$ = this.appwrite.account.onAuth(prefencesSchema);
-
-
-
-  triggerAuthCheck(): void {
-    // Triggers an auth check manually
-    this.appwrite.account.triggerAuthCheck()
-  }
-
-  blockAccount(): void {
-    // Suspend the currently logged in user account. Behind the scenes, the
-    // user's record is not deleted, but permanently blocked from any access. To
-    // completely delete a user, use the Users API instead.
-    this.appwrite.account.blockAccount()
-  }
-
-  convertAnonymousAccount(): void {
-
-    // This endpoint is a shortcut for converting an anonymous
-    // account to a permanent one
-    this.appwrite.account
-    .convertAnonymousAccountWithEmailAndPassword('<email>', '<password>')
-
-  }
-}
-```
-
----
-
-## Avatars
-
-See [Avatars API](https://appwrite.io/docs/client/avatars)
-
-## Databases
-
-See [Databases API](https://appwrite.io/docs/client/databases) & [Appwrite Realtime](https://appwrite.io/docs/realtime#channels)
-
-```javascript
-import { Component } from '@angular/core';
-import { Appwrite } from 'ngx-appwrite';
-import { z } from 'zod';
-
-@Component({
-  selector: 'root',
-  templateUrl: './app.component.html',
-  styleUrls: ['./app.component.scss']
+  styleUrl: './app.component.scss',
 })
 export class AppComponent implements OnInit {
-  constructor(private appwrite: Appwrite) {}
+  private account = inject(Account);
 
+  // login to appwrite
+  async ngOnInit() {
 
-  // -----------------------------------------------------------------------
-  //                                REALTIME
-  // -----------------------------------------------------------------------
-  ngOnInit(): void {
+      // login
+      const session = await this.account.createEmailPasswordSession(
+        SECRETS.EMAIL,
+        SECRETS.PASSWORD,
+      );
 
-    // define a schema in order to validate the custom document data received from the server
-    const myDocumentSchema = z.strictObject({
-      username: z.string(),
-      isAdmin: z.boolean(),
-      isCool: z.boolean()
-    })
-    // Monitoring a Collection
-    // Accepts Queries, however, listening to queries is done manually for now
-    // https://github.com/appwrite/appwrite/issues/2490
-    this.appwrite.databases.collection$('<collection-id>', myDocumentSchema)
-    .subscribe(data => console.log(docData));
+      console.log(session);
 
-    // Monitor a document
-    this.appwrite.databases.document$('<collection-id>', '<document-id>', myDocumentSchema)
-    .subscribe(docData => console.log(docData))
+      // provide the prefs structure
+      const account = await this.account.get<{ hello: string }>();
+      console.log(account.prefs.hello);
+      // output 'world'
+
+       // observable stream on the users auth session
+      this.account.onAuth<{ hello: string }>()
+      .subscribe((account: Models.User<{ hello: string }> | null) => {
+        console.log(account?.prefs.hello);
+      });
+    }
+}
+```
+
+2 - Alternative B: Use the service adapter to connect to collections
+
+```javascript
+// friends.service.ts
+import { Injectable } from '@angular/core';
+import { AppwriteAdapter } from 'ngx-appwrite';
+import { Input, array, merge, number, object, parse, string } from 'valibot';
+
+// Validation is optional, this example uses Valibot, but you can use any validation library or implement your own logic
+
+// Valibot reference schema for the Appwrite base document
+const AppwriteDocumentSchema = object({
+  $id: string(),
+  $collectionId: string(),
+  $databaseId: string(),
+  $createdAt: string(),
+  $updatedAt: string(),
+  $permissions: array(string()),
+});
+
+// Valibot schema for friends, merges base document
+const friendSchema = merge([
+  object({
+    name: string(),
+    age: number(),
+  }),
+  AppwriteDocumentSchema,
+]);
+
+// inferred type from Valibot schema
+export type Friend = Input<typeof friendSchema>;
+
+@Injectable({
+  providedIn: 'root',
+})
+export class FriendsService extends AppwriteAdapter {
+  // required
+  protected collectionId = <COLLECTION_ID>;
+
+  // The appwrite adapter implements CRUD operations as well as the ability to validate retrieved data. If the validationFn property is undefined, no validation of incoming data is performed.
+  protected validationFn = <Friend>(friend: Friend) =>
+    // validate using Valibot parse method
+    parse(friendSchema, friend) as Friend;
+
+  // AppwriteAdapter provides the following methods
+  // create
+  // update
+  // upsert
+  // delete
+  //
+  // document (Promise)
+  // document$ (Observable)
+  // documentList (Promise)
+  // documentList$ (Observable)
+}
+```
+
+Use the FriendsService in your component
+
+```javascript
+import { Component, OnInit, inject } from '@angular/core';
+import { Account } from 'ngx-appwrite';
+import { Friend, FriendsService } from './appwrite.service';
+
+@Component({
+  standalone: true,
+  imports: [],
+  selector: 'app-root',
+  templateUrl: './app.component.html',
+  styleUrl: './app.component.scss',
+})
+export class AppComponent implements OnInit {
+  private friendsService = inject(FriendsService);
+
+  // login to appwrite
+  async ngOnInit() {
+    this.friendsService.documentList$<Friend>().subscribe((list) => {
+      console.log(
+        'Friend age:',
+        list.documents[0].age,
+      );
+      console.log(
+        'Friend name:',
+        list.documents[0].name,
+      );
+    });
+
+    await this.friendsService.create<Friend>({
+      name: 'Mae Sue',
+      age: 18,
+    });
   }
 }
 ```
 
-## Functions
-
-See [Functions API](https://appwrite.io/docs/client/functions)
-
-## Localization
-
-See [Localizations API](https://appwrite.io/docs/client/locale)
-
-## Storage
-
-See [Storage API](https://appwrite.io/docs/client/storage)
-
-## Teams
-
-See [Teams API](https://appwrite.io/docs/client/teams)
+---
 
 ## License
 
