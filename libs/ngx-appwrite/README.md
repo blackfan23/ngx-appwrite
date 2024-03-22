@@ -1,6 +1,6 @@
 # ngx-appwrite
 
-A wrapper around the Appwrite WebSDK for easier implementation in Angular 17+ projects.
+A wrapper around the Appwrite WebSDK for easier implementation in Angular 16+ projects.
 The goal is to make the whole SDK accessible as well as provide some convenience functionality
 like RxJS streams where appropriate.
 
