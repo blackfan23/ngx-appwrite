@@ -7,8 +7,8 @@
     "start": "nx serve",
     "build": "nx build",
     "test": "nx test",
-    "release:patch": "cd ./libs/ngx-appwrite && npm version patch && cd .. && cd .. && nx build ngx-appwrite --prod && cd ./dist/libs/ngx-appwrite && npm publish",
-    "release:no-patch": "cd ./libs/ngx-appwrite && cd .. && cd .. && nx build ngx-appwrite --prod && cd ./dist/libs/ngx-appwrite && npm publish"
+    "release:patch": "cp ./README.md ./libs/ngx-appwrite/README.md && cp ./changelog.md ./libs/ngx-appwrite/changelog.md && cd ./libs/ngx-appwrite && npm version patch && cd .. && cd .. && nx build ngx-appwrite --prod && cd ./dist/libs/ngx-appwrite && npm publish",
+    "release:no-patch": "p ./README.md ./libs/ngx-appwrite/README.md && cp ./changelog.md ./libs/ngx-appwrite/changelog.md && cd ./libs/ngx-appwrite && cd .. && cd .. && nx build ngx-appwrite --prod && cd ./dist/libs/ngx-appwrite && npm publish"
   },
   "private": true,
   "dependencies": {
