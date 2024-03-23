@@ -235,7 +235,7 @@ export class Account {
    * @throws {AppwriteException}
    * @returns {Promise<Models.MfaType>}
    */
-  async addAuthenticator(): Promise<Models.MfaType> {
+  async createMfaAuthenticator(): Promise<Models.MfaType> {
     return this._account.createMfaAuthenticator(AuthenticatorType.Totp);
   }
 
@@ -248,7 +248,7 @@ export class Account {
    * @throws {AppwriteException}
    * @returns {Promise<Models.User<TPrefs>>}
    */
-  async verifyAuthenticator<TPrefs extends Models.Preferences>(
+  async updateMfaAuthenticator<TPrefs extends Models.Preferences>(
     otp: string,
   ): Promise<Models.User<TPrefs>> {
     return this._account.updateMfaAuthenticator(
@@ -266,7 +266,7 @@ export class Account {
    * @throws {AppwriteException}
    * @returns {Promise<Models.User<TPrefs>>}
    */
-  async deleteAuthenticator<TPrefs extends Models.Preferences>(
+  async deleteMfaAuthenticator<TPrefs extends Models.Preferences>(
     otp: string,
   ): Promise<Models.User<TPrefs>> {
     return this._account.deleteMfaAuthenticator(AuthenticatorType.Totp, otp);
