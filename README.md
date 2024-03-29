@@ -8,9 +8,9 @@ like RxJS streams where appropriate.
 
 ## Compatibility
 
-| ngx-appwrite | Appwrite-SDK | Angular |
-| ------------ | ------------ | ------- |
-| 1.5.\*       | 1.5.\*       | 16+     |
+| ngx-appwrite | Appwrite-Server | Angular | Appwrite-Web SDK |
+| ------------ | --------------- | ------- | ---------------- |
+| 1.5.\*       | 1.5.\*          | 16+     | 14.0.0           |
 
 ## Installation
 

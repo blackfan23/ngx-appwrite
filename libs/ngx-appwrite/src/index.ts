@@ -4,6 +4,7 @@ export * from './lib/avatars';
 export * from './lib/databases';
 export * from './lib/functions';
 export * from './lib/localization';
+export * from './lib/messaging';
 export * from './lib/storage';
 export * from './lib/teams';
 
