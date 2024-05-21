@@ -6,7 +6,7 @@ tmp
 /out-tsc
 
 # secrets
-/apps/appwrite-standalone-demo/src/secrets.env.ts
+/apps/appwrite-standalone-demo/src/app/secrets.env.ts
 
 
 # dependencies

@@ -1,8 +1,8 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { Account } from 'ngx-appwrite';
-import { SECRETS } from '../secrets.env';
 import { Friend, FriendsService } from './appwrite.service';
 import { NxWelcomeComponent } from './nx-welcome.component';
+import { SECRETS } from './secrets.env';
 
 @Component({
   standalone: true,

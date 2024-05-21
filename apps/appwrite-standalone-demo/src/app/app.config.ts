@@ -1,6 +1,6 @@
 import { ApplicationConfig } from '@angular/core';
 import { provideAppwrite } from 'ngx-appwrite';
-import { SECRETS } from '../secrets.env';
+import { SECRETS } from './secrets.env';
 
 // test data for later
 export const TEST_COLLECTION = '65fc3a62a07dbc4f3dc8';
