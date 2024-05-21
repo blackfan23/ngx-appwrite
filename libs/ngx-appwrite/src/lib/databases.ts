@@ -54,7 +54,7 @@ export class Databases {
     documentId: string = ID.unique(),
     alternateDatabaseId?: string,
   ): Promise<DocumentShape & Models.Document> {
-    const databaseId = DEFAULT_DATABASE_ID() ?? alternateDatabaseId;
+    const databaseId = alternateDatabaseId ?? DEFAULT_DATABASE_ID();
     if (!databaseId) {
       throw new Error(DATABASE_ERROR);
     } else {
@@ -94,7 +94,7 @@ export class Databases {
     permissions?: string[],
     alternateDatabaseId?: string,
   ): Promise<Models.Document & DocumentShape> {
-    const databaseId = DEFAULT_DATABASE_ID() ?? alternateDatabaseId;
+    const databaseId = alternateDatabaseId ?? DEFAULT_DATABASE_ID();
     if (!databaseId) {
       throw new Error(DATABASE_ERROR);
     } else {
@@ -136,7 +136,7 @@ export class Databases {
     documentId: string,
     alternateDatabaseId?: string,
   ): Promise<DocumentShape> {
-    const databaseId = DEFAULT_DATABASE_ID() ?? alternateDatabaseId;
+    const databaseId = alternateDatabaseId ?? DEFAULT_DATABASE_ID();
     if (!databaseId) {
       throw new Error(DATABASE_ERROR);
     } else {
@@ -167,7 +167,7 @@ export class Databases {
     queries?: string[],
     alternateDatabaseId?: string,
   ): Promise<Models.DocumentList<DocumentShape>> {
-    const databaseId = DEFAULT_DATABASE_ID() ?? alternateDatabaseId;
+    const databaseId = alternateDatabaseId ?? DEFAULT_DATABASE_ID();
     if (!databaseId) {
       throw new Error(DATABASE_ERROR);
     } else {
@@ -200,7 +200,7 @@ export class Databases {
     permissions?: string[],
     alternateDatabaseId?: string,
   ): Promise<DocumentShape> {
-    const databaseId = DEFAULT_DATABASE_ID() ?? alternateDatabaseId;
+    const databaseId = alternateDatabaseId ?? DEFAULT_DATABASE_ID();
     if (!databaseId) {
       throw new Error(DATABASE_ERROR);
     } else {
@@ -231,7 +231,7 @@ export class Databases {
     documentId: string,
     alternateDatabaseId?: string,
   ): Promise<Record<string, unknown>> {
-    const databaseId = DEFAULT_DATABASE_ID() ?? alternateDatabaseId;
+    const databaseId = alternateDatabaseId ?? DEFAULT_DATABASE_ID();
     if (!databaseId) {
       throw new Error(DATABASE_ERROR);
     } else {
@@ -275,7 +275,11 @@ export class Databases {
       switchMap((client) => watch<Models.Document>(client, path, events)),
       startWith(true),
       switchMap(() => {
-        return this.listDocuments<DocumentShape>(collectionId, queries);
+        return this.listDocuments<DocumentShape>(
+          collectionId,
+          queries,
+          alternativeDatabaseId,
+        );
       }),
       distinctUntilChanged((a, b) => deepEqual(a, b)),
       shareReplay(1),
@@ -329,7 +333,7 @@ export class Databases {
     alternativeDatabaseId: string | undefined,
     collectionId: string,
   ) {
-    const databaseId = DEFAULT_DATABASE_ID() ?? alternativeDatabaseId;
+    const databaseId = alternativeDatabaseId ?? DEFAULT_DATABASE_ID();
     if (!databaseId) {
       throw new Error(
         'No Database ID provided or database not initialized, use alternateDatabaseId argument',

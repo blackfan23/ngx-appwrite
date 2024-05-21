@@ -35,11 +35,13 @@ export class AppComponent implements OnInit {
     });
 
     this.friendsService.documentList$<Friend>().subscribe((list) => {
-      console.log(
-        '🚀 ~ AppComponent ~ ngOnInit ~ list:',
-        list.documents[0].age,
-      );
+      console.log('Default list ', list.documents);
     });
+    this.friendsService
+      .documentList$<Friend>(undefined, undefined, SECRETS.ALTERNATE_DATABASE)
+      .subscribe((list) => {
+        console.log('Alternate List', list.documents);
+      });
 
     // const updated = await this.friendsService.upsert<Friend>({
     //   $id: ID.unique(),
