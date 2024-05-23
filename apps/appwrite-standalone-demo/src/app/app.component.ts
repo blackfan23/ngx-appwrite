@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { Account } from 'ngx-appwrite';
 import { Friend, FriendsService } from './appwrite.service';
 import { NxWelcomeComponent } from './nx-welcome.component';
@@ -14,10 +14,14 @@ import { SECRETS } from './secrets.env';
 export class AppComponent implements OnInit {
   private account = inject(Account);
   private friendsService = inject(FriendsService);
-  title = SECRETS.TITLE;
+  title = signal(SECRETS.TITLE);
 
   // login to appwrite
   async ngOnInit() {
+    setTimeout(() => {
+      this.title.set('no title');
+    }, 2500);
+
     try {
       const account = await this.account.get<{ hello: string }>();
       console.log(account.prefs.hello);

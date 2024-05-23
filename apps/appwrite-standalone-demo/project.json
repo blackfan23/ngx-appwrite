@@ -13,7 +13,7 @@
         "outputPath": "dist/apps/appwrite-standalone-demo",
         "index": "apps/appwrite-standalone-demo/src/index.html",
         "browser": "apps/appwrite-standalone-demo/src/main.ts",
-        "polyfills": ["zone.js"],
+        "polyfills": [],
         "tsConfig": "apps/appwrite-standalone-demo/tsconfig.app.json",
         "inlineStyleLanguage": "scss",
         "assets": [

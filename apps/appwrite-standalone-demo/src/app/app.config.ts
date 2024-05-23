@@ -1,4 +1,7 @@
-import { ApplicationConfig } from '@angular/core';
+import {
+  ApplicationConfig,
+  provideExperimentalZonelessChangeDetection,
+} from '@angular/core';
 import { provideAppwrite } from 'ngx-appwrite';
 import { SECRETS } from './secrets.env';
 
@@ -16,5 +19,6 @@ export const appConfig: ApplicationConfig = {
       project: SECRETS.PROJECT_ID,
       defaultDatabase: SECRETS.DEFAULT_DATABASE,
     }),
+    provideExperimentalZonelessChangeDetection(),
   ],
 };
