@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.6] - 2024-05-21
+
+- Updated dependencies (Angular 18)
+
 ## [1.5.5] - 2024-05-21
 
 - Updated dependencies
