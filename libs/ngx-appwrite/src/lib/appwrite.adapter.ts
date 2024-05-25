@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Models } from 'appwrite';
+import { ID, Models } from 'appwrite';
 import { Observable, map } from 'rxjs';
 import { Databases } from './databases';
 
@@ -30,12 +30,14 @@ export abstract class AppwriteAdapter {
   public async create<DocumentShape extends Models.Document>(
     awDocument: Partial<DocumentShape>,
     permissions: string[] = [],
+    documentId: string = ID.unique(),
     alternativeDatabaseId?: string,
   ): Promise<DocumentShape> {
     const data = await this.databases.createDocument<DocumentShape>(
       this.collectionId,
       awDocument,
       permissions,
+      documentId,
       alternativeDatabaseId,
     );
 

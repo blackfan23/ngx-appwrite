@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Functions, Models } from 'appwrite';
+import { ExecutionMethod, Functions, Models } from 'appwrite';
 import { CLIENT } from './setup';
 
 @Injectable({
@@ -45,8 +45,18 @@ export class FunctionsService {
     functionId: string,
     data?: string,
     async?: boolean,
+    path: string = '/',
+    method?: ExecutionMethod,
+    headers?: Record<string, string>,
   ): Promise<Models.Execution> {
-    return this._functions.createExecution(functionId, data, async);
+    return this._functions.createExecution(
+      functionId,
+      data,
+      async,
+      path,
+      method,
+      headers,
+    );
   }
   /**
    * Get Execution

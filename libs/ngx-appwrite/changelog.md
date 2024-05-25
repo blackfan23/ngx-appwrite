@@ -2,9 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.5.6] - 2024-05-21
+## [1.5.7] - 2024-05-25
 
-- Updated dependencies (Angular 18)
+- Fixed bug, missing customId param [#4](https://github.com/blackfan23/ngx-appwrite/issues/4#issue-2313805238)
+- Fixed bug, missing function execution settings [#3](https://github.com/blackfan23/ngx-appwrite/issues/3#issue-2313780308)
 
 ## [1.5.5] - 2024-05-21
 
@@ -29,6 +30,8 @@ Added this changelog file.
 ### Added
 
 - Initial release
+  [1.5.7]: https://github.com/blackfan23/ngx-appwrite/releases/tag/v1.5.7
+  [1.5.6]: https://github.com/blackfan23/ngx-appwrite/releases/tag/v1.5.6
   [1.5.5]: https://github.com/blackfan23/ngx-appwrite/releases/tag/v1.5.5
   [1.5.4]: https://github.com/blackfan23/ngx-appwrite/releases/tag/v1.5.4
   [1.5.3]: https://github.com/blackfan23/ngx-appwrite/releases/tag/v1.5.3
