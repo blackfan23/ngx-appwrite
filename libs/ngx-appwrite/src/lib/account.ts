@@ -268,7 +268,7 @@ export class Account {
    */
   async deleteMfaAuthenticator<TPrefs extends Models.Preferences>(
     otp: string,
-  ): Promise<Models.User<TPrefs>> {
+  ): Promise<{}> {
     return this._account.deleteMfaAuthenticator(AuthenticatorType.Totp, otp);
   }
 
