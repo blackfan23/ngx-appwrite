@@ -10,8 +10,8 @@ like RxJS streams where appropriate.
 
 | ngx-appwrite | Appwrite-Server | Angular | Appwrite-Web SDK |
 | ------------ | --------------- | ------- | ---------------- |
+| 1.5.8        | 1.5.X           | 16+     | 15.0.0           |
 | 1.5.X        | 1.5.X           | 16+     | 14.0.1           |
-| 1.5.4        | 1.5.4           | 16+     | 14.0.0           |
 
 ## Installation
 

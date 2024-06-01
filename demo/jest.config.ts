@@ -1,9 +1,9 @@
 /* eslint-disable */
 export default {
-  displayName: 'appwrite-standalone-demo',
-  preset: '../../jest.preset.js',
+  displayName: 'demo',
+  preset: '../jest.preset.js',
   setupFilesAfterEnv: ['<rootDir>/src/test-setup.ts'],
-  coverageDirectory: '../../coverage/apps/appwrite-standalone-demo',
+  coverageDirectory: '../coverage/demo',
   transform: {
     '^.+\\.(ts|mjs|js|html)$': [
       'jest-preset-angular',

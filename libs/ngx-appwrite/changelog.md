@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.8] - 2024-06-01
+
+- Updated appwrite sdk to 15.0.0
+
+[Changes in appwrite sdk-for-web](https://github.com/appwrite/sdk-for-web/releases/tag/15.0.0)
+
+Breaking changes
+
+- Renamed CreditCard.Consosud to CreditCard.Cencosud
+- Removed return type for Account.deleteMfaAuthenticator()
+
+Notable changes
+
+- Added Flag.FrenchPolynesia
+- Added MfaFactors.recoveryCode
+
+Fixes
+
+- Prevent manually set X-Fallback-Cookies from being wiped
+- Miscellaneous
+- Remove cross-fetch and isomorphic-form-data packages
+
 ## [1.5.7] - 2024-05-25
 
 - Fixed bug, missing customId param [#4](https://github.com/blackfan23/ngx-appwrite/issues/4#issue-2313805238)
@@ -27,12 +49,12 @@ Added this changelog file.
 
 ## [1.5.2] - 2024-03-21
 
-### Added
+Inital release
 
-- Initial release
-  [1.5.7]: https://github.com/blackfan23/ngx-appwrite/releases/tag/v1.5.7
-  [1.5.6]: https://github.com/blackfan23/ngx-appwrite/releases/tag/v1.5.6
-  [1.5.5]: https://github.com/blackfan23/ngx-appwrite/releases/tag/v1.5.5
-  [1.5.4]: https://github.com/blackfan23/ngx-appwrite/releases/tag/v1.5.4
-  [1.5.3]: https://github.com/blackfan23/ngx-appwrite/releases/tag/v1.5.3
-  [1.5.2]: https://github.com/blackfan23/ngx-appwrite/releases/tag/v1.5.2
+[1.5.8]: https://github.com/blackfan23/ngx-appwrite/releases/tag/v1.5.7
+[1.5.7]: https://github.com/blackfan23/ngx-appwrite/releases/tag/v1.5.7
+[1.5.6]: https://github.com/blackfan23/ngx-appwrite/releases/tag/v1.5.6
+[1.5.5]: https://github.com/blackfan23/ngx-appwrite/releases/tag/v1.5.5
+[1.5.4]: https://github.com/blackfan23/ngx-appwrite/releases/tag/v1.5.4
+[1.5.3]: https://github.com/blackfan23/ngx-appwrite/releases/tag/v1.5.3
+[1.5.2]: https://github.com/blackfan23/ngx-appwrite/releases/tag/v1.5.2
