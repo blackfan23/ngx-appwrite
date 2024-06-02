@@ -51,7 +51,7 @@ Added this changelog file.
 
 Inital release
 
-[1.5.8]: https://github.com/blackfan23/ngx-appwrite/releases/tag/v1.5.7
+[1.5.8]: https://github.com/blackfan23/ngx-appwrite/releases/tag/v1.5.8
 [1.5.7]: https://github.com/blackfan23/ngx-appwrite/releases/tag/v1.5.7
 [1.5.6]: https://github.com/blackfan23/ngx-appwrite/releases/tag/v1.5.6
 [1.5.5]: https://github.com/blackfan23/ngx-appwrite/releases/tag/v1.5.5
