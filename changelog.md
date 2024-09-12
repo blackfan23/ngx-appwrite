@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.0] - 2024-09-12
+
+- Updated dependencies, works with appwrite server 1.6.0
+
 ## [1.5.8] - 2024-06-01
 
 - Updated appwrite sdk to 15.0.0
@@ -51,6 +55,7 @@ Added this changelog file.
 
 Inital release
 
+[1.6.0]: https://github.com/blackfan23/ngx-appwrite/releases/tag/v1.6.0
 [1.5.8]: https://github.com/blackfan23/ngx-appwrite/releases/tag/v1.5.8
 [1.5.7]: https://github.com/blackfan23/ngx-appwrite/releases/tag/v1.5.7
 [1.5.6]: https://github.com/blackfan23/ngx-appwrite/releases/tag/v1.5.6

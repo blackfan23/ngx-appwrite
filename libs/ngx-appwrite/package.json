@@ -1,14 +1,14 @@
 {
   "name": "ngx-appwrite",
   "author": "Julius Pargac <transferx23@googlemail.com>",
-  "version": "1.5.8",
+  "version": "1.6.0",
   "peerDependencies": {
     "@angular/common": "^18.0.0",
     "@angular/core": "^18.0.0",
     "appwrite": "^14.0.1"
   },
   "dependencies": {
-    "tslib": "^2.6.2"
+    "tslib": "^2.7.0"
   },
   "sideEffects": false,
   "repository": {
