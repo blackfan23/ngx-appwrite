@@ -74,7 +74,7 @@ export class StorageService {
    * @param {string} background
    * @param {string} output
    * @throws {AppwriteException}
-   * @returns {URL}
+   * @returns {string}
    */
   async getFilePreview(
     bucketId: string,
@@ -90,7 +90,7 @@ export class StorageService {
     rotation?: number | undefined,
     background?: string | undefined,
     output?: ImageFormat | undefined,
-  ): Promise<URL> {
+  ): Promise<string> {
     return this._storage.getFilePreview(
       bucketId,
       fileId,
@@ -118,9 +118,9 @@ export class StorageService {
    * @param {string} bucketId
    * @param {string} fileId
    * @throws {AppwriteException}
-   * @returns {URL}
+   * @returns {string}
    */
-  async getFileDownload(bucketId: string, fileId: string): Promise<URL> {
+  async getFileDownload(bucketId: string, fileId: string): Promise<string> {
     return this._storage.getFileDownload(bucketId, fileId);
   }
 
@@ -134,9 +134,9 @@ export class StorageService {
    * @param {string} bucketId
    * @param {string} fileId
    * @throws {AppwriteException}
-   * @returns {URL}
+   * @returns {string}
    */
-  async getFileForView(bucketId: string, fileId: string): Promise<URL> {
+  async getFileForView(bucketId: string, fileId: string): Promise<string> {
     return this._storage.getFileView(bucketId, fileId);
   }
 

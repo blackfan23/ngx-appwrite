@@ -262,14 +262,13 @@ export class Account {
    *
    * Delete an authenticator for a user.
    * Verify the authenticator using the verify authenticator method.
-   * @param {string} otp
    * @throws {AppwriteException}
    * @returns {Promise<Models.User<TPrefs>>}
    */
-  async deleteMfaAuthenticator<TPrefs extends Models.Preferences>(
-    otp: string,
-  ): Promise<{}> {
-    return this._account.deleteMfaAuthenticator(AuthenticatorType.Totp, otp);
+  async deleteMfaAuthenticator<
+    TPrefs extends Models.Preferences,
+  >(): Promise<{}> {
+    return this._account.deleteMfaAuthenticator(AuthenticatorType.Totp);
   }
 
   /**
@@ -626,12 +625,12 @@ export class Account {
    * @throws {AppwriteException}
    * @returns {void|string}
    */
-  createOAuth2Session(
+  async createOAuth2Session(
     provider: OAuthProvider,
     success?: string,
     failure?: string,
     scopes?: string[],
-  ): URL | void {
+  ): Promise<string | void> {
     const url = this._account.createOAuth2Session(
       provider,
       success,
@@ -916,12 +915,12 @@ export class Account {
    * @throws {AppwriteException}
    * @returns {void|string}
    */
-  createOAuth2Token(
+  async createOAuth2Token(
     provider: OAuthProvider,
     success?: string,
     failure?: string,
     scopes?: string[],
-  ): URL | void {
+  ): Promise<string | void> {
     const url = this._account.createOAuth2Token(
       provider,
       success,

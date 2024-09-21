@@ -1,7 +1,7 @@
 {
   "name": "ngx-appwrite",
   "author": "Julius Pargac <transferx23@googlemail.com>",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "peerDependencies": {
     "@angular/common": "^18.0.0",
     "@angular/core": "^18.0.0",

@@ -26,14 +26,14 @@ export class AvatarsService {
    * @param {number} height
    * @param {number} quality
    * @throws {AppwriteException}
-   * @returns {URL}
+   * @returns {string}
    */
   getBrowser(
     code: Browser,
     width?: number,
     height?: number,
     quality?: number,
-  ): URL {
+  ): string {
     return this._avatars.getBrowser(code, width, height, quality);
   }
   /**
@@ -54,14 +54,14 @@ export class AvatarsService {
    * @param {number} height
    * @param {number} quality
    * @throws {AppwriteException}
-   * @returns {URL}
+   * @returns {string}
    */
   getCreditCard(
     code: CreditCard,
     width?: number,
     height?: number,
     quality?: number,
-  ): URL {
+  ): string {
     return this._avatars.getCreditCard(code, width, height, quality);
   }
   /**
@@ -73,9 +73,9 @@ export class AvatarsService {
    *
    * @param {string} url
    * @throws {AppwriteException}
-   * @returns {URL}
+   * @returns {string}
    */
-  getFavicon(url: string): URL {
+  getFavicon(url: string): string {
     return this._avatars.getFavicon(url);
   }
   /**
@@ -97,9 +97,14 @@ export class AvatarsService {
    * @param {number} height
    * @param {number} quality
    * @throws {AppwriteException}
-   * @returns {URL}
+   * @returns {string}
    */
-  getFlag(code: Flag, width?: number, height?: number, quality?: number): URL {
+  getFlag(
+    code: Flag,
+    width?: number,
+    height?: number,
+    quality?: number,
+  ): string {
     return this._avatars.getFlag(code, width, height, quality);
   }
   /**
@@ -120,9 +125,9 @@ export class AvatarsService {
    * @param {number} width
    * @param {number} height
    * @throws {AppwriteException}
-   * @returns {URL}
+   * @returns {string}
    */
-  getImage(url: string, width?: number, height?: number): URL {
+  getImage(url: string, width?: number, height?: number): string {
     return this._avatars.getImage(url, width, height);
   }
   /**
@@ -150,14 +155,14 @@ export class AvatarsService {
    * @param {number} height
    * @param {string} background
    * @throws {AppwriteException}
-   * @returns {URL}
+   * @returns {string}
    */
   getInitials(
     name?: string,
     width?: number,
     height?: number,
     background?: string,
-  ): URL {
+  ): string {
     return this._avatars.getInitials(name, width, height, background);
   }
   /**
@@ -172,9 +177,14 @@ export class AvatarsService {
    * @param {number} margin
    * @param {boolean} download
    * @throws {AppwriteException}
-   * @returns {URL}
+   * @returns {string}
    */
-  getQR(text: string, size?: number, margin?: number, download?: boolean): URL {
+  getQR(
+    text: string,
+    size?: number,
+    margin?: number,
+    download?: boolean,
+  ): string {
     return this._avatars.getQR(text, size, margin, download);
   }
 }
