@@ -221,7 +221,7 @@ export class StorageService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  // eslint-disable-next-line @typescript-eslint/ban-types
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   async deleteFile(bucketId: string, fileId: string): Promise<{}> {
     return this._storage.deleteFile(bucketId, fileId);
   }

@@ -1,6 +1,4 @@
-/* eslint-disable @typescript-eslint/ban-types */
 import { Client, RealtimeResponseEvent } from 'appwrite';
-import { intersection } from 'lodash';
 import { Observable, Subscriber } from 'rxjs';
 
 export const watch = <T>(
@@ -39,3 +37,29 @@ export const wait = (seconds: number): Promise<void> => {
 export const deepEqual = <T>(obj1: T, obj2: T) => {
   return JSON.stringify(obj1) === JSON.stringify(obj2);
 };
+
+function intersection(...args: (string | string[])[]): string[] {
+  const arrays: string[][] = args.map((arg) =>
+    Array.isArray(arg) ? arg : [arg],
+  );
+
+  if (arrays.length === 0) {
+    return [];
+  }
+
+  const firstArray = arrays[0];
+  const uniqueValues = new Set(firstArray);
+
+  for (let i = 1; i < arrays.length; i++) {
+    const currentArray = arrays[i];
+
+    for (let j = 0; j < currentArray.length; j++) {
+      const value = currentArray[j];
+      if (!uniqueValues.has(value)) {
+        uniqueValues.delete(value);
+      }
+    }
+  }
+
+  return Array.from(uniqueValues);
+}

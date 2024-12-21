@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.2] - 2024-12-21
+
+- Updated dependencies, works with appwrite server 1.6.0
+- Updated to appwrite Web-SDK version 16.1.0
+
 ## [1.6.1] - 2024-09-12
 
 - Updated dependencies, works with appwrite server 1.6.0

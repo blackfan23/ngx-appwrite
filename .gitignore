@@ -3,16 +3,13 @@
 # compiled output
 dist
 tmp
-/out-tsc
-
-# secrets
-*secrets.env.ts
+out-tsc
 
 # dependencies
 node_modules
+public
 
 # IDEs and editors
-/.nx
 /.idea
 .project
 .classpath
@@ -28,8 +25,6 @@ node_modules
 !.vscode/launch.json
 !.vscode/extensions.json
 
-test-db.ts
-
 # misc
 /.sass-cache
 /connect.lock
@@ -43,5 +38,8 @@ testem.log
 # System Files
 .DS_Store
 Thumbs.db
+
+.nx/cache
+.nx/workspace-data
 
 .angular
