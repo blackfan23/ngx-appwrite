@@ -8,6 +8,7 @@ out-tsc
 # dependencies
 node_modules
 public
+apps/demo/src/app/secrets.env.ts
 
 # IDEs and editors
 /.idea
