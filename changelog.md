@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.7.0] - 2025-02-04
+
+- **BREAKING**: AppwriteAdapter class now takes a generic type. This simplifies the use of all methods inside, which don't need to be passed a generic type anymore. (See README.md for instructions)
+- Improved typing in general
+
+- Updated dependencies, works with appwrite server 1.6.X
+- Updated to appwrite Web-SDK version 17.0.0 ([Changes in appwrite sdk-for-web](https://github.com/appwrite/sdk-for-web/releases/tag/17.0.0))
+
 ## [1.6.2] - 2024-12-21
 
 - Updated dependencies, works with appwrite server 1.6.0
@@ -18,9 +26,7 @@ All notable changes to this project will be documented in this file.
 
 ## [1.5.8] - 2024-06-01
 
-- Updated appwrite sdk to 15.0.0
-
-[Changes in appwrite sdk-for-web](https://github.com/appwrite/sdk-for-web/releases/tag/15.0.0)
+- Updated appwrite sdk to 15.0.0 ([Changes in appwrite sdk-for-web](https://github.com/appwrite/sdk-for-web/releases/tag/15.0.0))
 
 Breaking changes
 
@@ -65,6 +71,8 @@ Added this changelog file.
 
 Inital release
 
+[1.7.0]: https://github.com/blackfan23/ngx-appwrite/releases/tag/v1.7.0
+[1.6.2]: https://github.com/blackfan23/ngx-appwrite/releases/tag/v1.6.2
 [1.6.1]: https://github.com/blackfan23/ngx-appwrite/releases/tag/v1.6.1
 [1.6.0]: https://github.com/blackfan23/ngx-appwrite/releases/tag/v1.6.0
 [1.5.8]: https://github.com/blackfan23/ngx-appwrite/releases/tag/v1.5.8

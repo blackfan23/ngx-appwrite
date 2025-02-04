@@ -43,8 +43,6 @@ export class Account {
   /*                                  Reactive                                  */
   /* -------------------------------------------------------------------------- */
 
-  // eslint-disable-next-line @typescript-eslint/ban-types
-
   constructor() {
     this._account = new AppwriteAccount(CLIENT());
   }
@@ -176,7 +174,7 @@ export class Account {
    * @throws {AppwriteException}
    * @returns {Promise<{}>}
    */
-  // eslint-disable-next-line @typescript-eslint/ban-types
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   async deleteIdentity(id: string): Promise<{}> {
     return this._account.deleteIdentity(id);
   }
@@ -265,9 +263,8 @@ export class Account {
    * @throws {AppwriteException}
    * @returns {Promise<Models.User<TPrefs>>}
    */
-  async deleteMfaAuthenticator<
-    TPrefs extends Models.Preferences,
-  >(): Promise<{}> {
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+  async deleteMfaAuthenticator(): Promise<{}> {
     return this._account.deleteMfaAuthenticator(AuthenticatorType.Totp);
   }
 
@@ -302,7 +299,8 @@ export class Account {
   async updateMfaChallenge(
     challengeId: string,
     otp: string,
-    // eslint-disable-next-line @typescript-eslint/ban-types
+
+    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   ): Promise<{}> {
     return this._account.updateMfaChallenge(challengeId, otp);
   }
@@ -464,11 +462,7 @@ export class Account {
    * @throws {AppwriteException}
    * @returns {Promise<Models.Token>}
    */
-  async createRecovery(
-    email: string,
-    url: string,
-  ): // eslint-disable-next-line @typescript-eslint/ban-types
-  Promise<Models.Token> {
+  async createRecovery(email: string, url: string): Promise<Models.Token> {
     const result = await this._account.createRecovery(email, url);
     this.triggerAuthCheck();
     return result;
@@ -525,7 +519,7 @@ export class Account {
    * @throws {AppwriteException}
    * @returns {Promise<{}>}
    */
-  async deleteSessions(): // eslint-disable-next-line @typescript-eslint/ban-types
+  async deleteSessions(): // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   Promise<{}> {
     const result = await this._account.deleteSessions();
     this.triggerAuthCheck();
@@ -716,10 +710,7 @@ export class Account {
    * @throws {AppwriteException}
    * @returns {Promise<Models.Session>}
    */
-  async updateSession(
-    sessionId = 'current',
-  ): // eslint-disable-next-line @typescript-eslint/ban-types
-  Promise<Models.Session> {
+  async updateSession(sessionId = 'current'): Promise<Models.Session> {
     const result = await this._account.updateSession(sessionId);
     this.triggerAuthCheck();
     return result;
@@ -740,7 +731,7 @@ export class Account {
    */
   async deleteSession(
     sessionId = 'current',
-  ): // eslint-disable-next-line @typescript-eslint/ban-types
+  ): // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   Promise<{}> {
     const result = await this._account.deleteSession(sessionId);
     this.triggerAuthCheck();
@@ -820,7 +811,7 @@ export class Account {
    */
   async deletePushTarget(
     targetId: string,
-    // eslint-disable-next-line @typescript-eslint/ban-types
+    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   ): Promise<{}> {
     const account = await this._account.deletePushTarget(targetId);
     this.triggerAuthCheck();
@@ -848,7 +839,6 @@ export class Account {
     userId: string,
     email: string,
     phrase = false,
-    // eslint-disable-next-line @typescript-eslint/ban-types
   ): Promise<Models.Token> {
     const account = await this._account.createEmailToken(userId, email, phrase);
     this.triggerAuthCheck();
@@ -975,10 +965,7 @@ export class Account {
    * @throws {AppwriteException}
    * @returns {Promise<Models.Token>}
    */
-  async createVerification(
-    url: string,
-  ): // eslint-disable-next-line @typescript-eslint/ban-types
-  Promise<Models.Token> {
+  async createVerification(url: string): Promise<Models.Token> {
     const result = await this._account.createVerification(url);
     this.triggerAuthCheck();
     return result;
@@ -999,8 +986,7 @@ export class Account {
   async updateVerification(
     userId: string,
     secret: string,
-  ): // eslint-disable-next-line @typescript-eslint/ban-types
-  Promise<Models.Token> {
+  ): Promise<Models.Token> {
     const result = await this._account.updateVerification(userId, secret);
     this.triggerAuthCheck();
     return result;
@@ -1077,7 +1063,8 @@ export class Account {
    * @throws {AppwriteException}
    * @returns {Promise<{}> }
    */
-  // eslint-disable-next-line @typescript-eslint/ban-types
+
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   async logout(): Promise<{}> {
     return this.deleteSession('current');
   }

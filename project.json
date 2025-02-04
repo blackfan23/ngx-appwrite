@@ -1,5 +1,5 @@
 {
-  "name": "ngx-appwrite-2",
+  "name": "ngx-appwrite-nx",
   "$schema": "node_modules/nx/schemas/project-schema.json",
   "includedScripts": [],
   "projectType": "application",
@@ -11,7 +11,7 @@
       "executor": "@angular-devkit/build-angular:application",
       "outputs": ["{options.outputPath}"],
       "options": {
-        "outputPath": "dist/ngx-appwrite-2",
+        "outputPath": "dist/ngx-appwrite-nx",
         "index": "./src/index.html",
         "browser": "./src/main.ts",
         "polyfills": ["zone.js"],

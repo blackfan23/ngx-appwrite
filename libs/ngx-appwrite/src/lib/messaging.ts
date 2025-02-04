@@ -36,7 +36,7 @@ export class MessagingService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  // eslint-disable-next-line @typescript-eslint/ban-types
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   deleteSubscriber(topicId: string, subscriberId: string): Promise<{}> {
     return this._messaging.deleteSubscriber(topicId, subscriberId);
   }

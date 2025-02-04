@@ -4,15 +4,12 @@ import { Observable, map } from 'rxjs';
 import { Databases } from './databases';
 
 @Injectable()
-export abstract class AppwriteAdapter {
+export abstract class AppwriteAdapter<DocumentShape extends Models.Document> {
   private databases = inject(Databases);
   protected abstract collectionId: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   protected abstract validationFn:
     | undefined
-    | (<DocumentShape extends Models.Document>(
-        data: DocumentShape,
-      ) => DocumentShape);
+    | ((data: unknown) => DocumentShape);
 
   /**
    * Create Document
@@ -27,13 +24,31 @@ export abstract class AppwriteAdapter {
    * @throws {AppwriteException}
    * @returns {Promise<DocumentShape>}
    */
-  public async create<DocumentShape extends Models.Document>(
-    awDocument: Partial<DocumentShape>,
+  public async create(
+    awDocument: Omit<
+      DocumentShape,
+      | '$id'
+      | '$collectionId'
+      | '$databaseId'
+      | '$updatedAt'
+      | '$createdAt'
+      | '$permissions'
+    >,
     permissions: string[] = [],
     documentId: string = ID.unique(),
     alternativeDatabaseId?: string,
   ): Promise<DocumentShape> {
-    const data = await this.databases.createDocument<DocumentShape>(
+    const data = await this.databases.createDocument<
+      Omit<
+        DocumentShape,
+        | '$id'
+        | '$collectionId'
+        | '$databaseId'
+        | '$updatedAt'
+        | '$createdAt'
+        | '$permissions'
+      >
+    >(
       this.collectionId,
       awDocument,
       permissions,
@@ -42,9 +57,9 @@ export abstract class AppwriteAdapter {
     );
 
     if (this.validationFn) {
-      return this.validationFn<DocumentShape>(data);
+      return this.validationFn(data);
     }
-    return data;
+    return data as DocumentShape;
   }
 
   /**
@@ -60,7 +75,7 @@ export abstract class AppwriteAdapter {
    * @throws {AppwriteException}
    * @returns {Promise<T & Models.Document>}
    */
-  public async update<DocumentShape extends Models.Document>(
+  public async update(
     awDocument: Partial<DocumentShape> & { $id: string },
     permissions: string[] = [],
     alternativeDatabaseId?: string,
@@ -77,7 +92,7 @@ export abstract class AppwriteAdapter {
     );
 
     if (this.validationFn) {
-      return this.validationFn<DocumentShape>(data);
+      return this.validationFn(data);
     }
     return data;
   }
@@ -96,7 +111,7 @@ export abstract class AppwriteAdapter {
    * @throws {AppwriteException}
    * @returns {Promise<T & Models.Document>}
    */
-  public async upsert<DocumentShape extends Models.Document>(
+  public async upsert(
     awDocument: Partial<DocumentShape>,
     permissions: string[] = [],
     alternativeDatabaseId?: string,
@@ -109,7 +124,7 @@ export abstract class AppwriteAdapter {
     );
 
     if (this.validationFn) {
-      return this.validationFn<DocumentShape>(data);
+      return this.validationFn(data);
     }
     return data;
   }
@@ -123,7 +138,7 @@ export abstract class AppwriteAdapter {
    * @throws {AppwriteException}
    * @returns {Promise<T & Models.Document>}
    */
-  public async delete<DocumentShape extends Models.Document>(
+  public async delete(
     awDocumentIdOrAwDocument:
       | string
       | (Partial<DocumentShape> & { $id: string }),
@@ -144,7 +159,7 @@ export abstract class AppwriteAdapter {
     );
   }
 
-  public async document<DocumentShape extends Models.Document>(
+  public async document(
     documentId: string,
     alternativeDatabaseId?: string,
   ): Promise<DocumentShape> {
@@ -155,12 +170,12 @@ export abstract class AppwriteAdapter {
     );
 
     if (this.validationFn) {
-      return this.validationFn<DocumentShape>(data);
+      return this.validationFn(data);
     }
     return data;
   }
 
-  public async documentList<DocumentShape extends Models.Document>(
+  public async documentList(
     queries: string[] = [],
     alternativeDatabaseId?: string,
   ): Promise<Models.DocumentList<DocumentShape>> {
@@ -170,16 +185,15 @@ export abstract class AppwriteAdapter {
       alternativeDatabaseId,
     );
 
-    if (this.validationFn) {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      list.documents = list.documents.map((item) =>
-        this.validationFn!<DocumentShape>(item),
-      );
+    const validationFn = this.validationFn;
+
+    if (validationFn) {
+      list.documents = list.documents.map((item) => validationFn(item));
     }
     return list;
   }
 
-  public documentList$<DocumentShape extends Models.Document>(
+  public documentList$(
     queries: string[] = [],
     events: string[] = [],
     alternativeDatabaseId?: string,
@@ -193,19 +207,17 @@ export abstract class AppwriteAdapter {
       )
       .pipe(
         map((list) => {
-          if (this.validationFn) {
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            list.documents = list.documents.map((item) =>
-              // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-              this.validationFn!<DocumentShape>(item),
-            );
+          const validationFn = this.validationFn;
+
+          if (validationFn) {
+            list.documents = list.documents.map((item) => validationFn(item));
           }
           return list;
         }),
       );
   }
 
-  public document$<DocumentShape extends Models.Document>(
+  public document$(
     documentId: string,
     queries: string[] = [],
     alternativeDatabaseId?: string,
@@ -220,7 +232,7 @@ export abstract class AppwriteAdapter {
       .pipe(
         map((item) => {
           if (item && this.validationFn) {
-            return this.validationFn<DocumentShape>(item);
+            return this.validationFn(item);
           }
           return item;
         }),

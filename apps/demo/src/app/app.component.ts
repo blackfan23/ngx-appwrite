@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { Account } from 'ngx-appwrite';
-import { Friend, FriendsService } from './appwrite.service';
+import { FriendsService } from './appwrite.service';
 import { NxWelcomeComponent } from './nx-welcome.component';
 import { SECRETS } from './secrets.env';
 
@@ -38,25 +38,28 @@ export class AppComponent implements OnInit {
       console.log(account?.prefs.hello);
     });
 
-    this.friendsService.documentList$<Friend>().subscribe((list) => {
+    this.friendsService.documentList$().subscribe((list) => {
       console.log('Default list ', list.documents);
     });
     this.friendsService
-      .documentList$<Friend>(undefined, undefined, SECRETS.ALTERNATE_DATABASE)
+      .documentList$(undefined, undefined, SECRETS.ALTERNATE_DATABASE)
       .subscribe((list) => {
         console.log('Alternate List', list.documents);
       });
 
-    // const updated = await this.friendsService.upsert<Friend>({
-    //   $id: ID.unique(),
-    //   name: 'John Doe',
-    //   age: 18,
-    // });
-    // console.log('🚀 ~ AppComponent ~ ngOnInit ~ updated:', updated.age);
-    // console.log('🚀 ~ AppComponent ~ ngOnInit ~ updated:', updated.name);
+    const created = await this.friendsService.create(
+      {
+        name: 'Mae Sue',
+        age: 12,
+      },
+      [], // permissions,
+    );
+    console.log('🚀 ~ AppComponent ~ ngOnInit ~ create:', created.age);
+    console.log('🚀 ~ AppComponent ~ ngOnInit ~ create:', created.name);
+    console.log('🚀 ~ AppComponent ~ ngOnInit ~ create:', created.$id);
 
     this.friendsService
-      .document$<Friend>('65fc3f41ce84f248516d')
+      .document$('65fc3f41ce84f248516d')
       .subscribe((friend) => {
         console.log('🚀 ~ AppComponent ~ ngOnInit ~ friend:', friend);
         console.log(
@@ -66,7 +69,7 @@ export class AppComponent implements OnInit {
         console.log('🚀 ~ AppComponent ~ ngOnInit ~ friend:', friend?.name);
       });
 
-    await this.friendsService.update<Friend>({
+    await this.friendsService.update({
       $id: '65fc3f41ce84f248516d',
       name: 'Mae Sue',
       age: 18,

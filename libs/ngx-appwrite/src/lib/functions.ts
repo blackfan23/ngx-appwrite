@@ -45,7 +45,7 @@ export class FunctionsService {
     functionId: string,
     data?: string,
     async?: boolean,
-    path: string = '/',
+    path = '/',
     method?: ExecutionMethod,
     headers?: Record<string, string>,
   ): Promise<Models.Execution> {

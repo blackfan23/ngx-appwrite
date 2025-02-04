@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/ban-types */
 import { Injectable, inject } from '@angular/core';
 import { Databases as AppwriteDatabases, ID, Models, Query } from 'appwrite';
 import {
@@ -47,13 +46,15 @@ export class Databases {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  public async createDocument<DocumentShape extends Record<string, unknown>>(
+  public async createDocument<
+    CreateDocumentShape extends Record<string, unknown>,
+  >(
     collectionId: string,
-    data: Partial<DocumentShape>,
+    data: Partial<CreateDocumentShape>,
     permissions?: string[],
     documentId: string = ID.unique(),
     alternateDatabaseId?: string,
-  ): Promise<DocumentShape & Models.Document> {
+  ): Promise<CreateDocumentShape & Models.Document> {
     const databaseId = alternateDatabaseId ?? DEFAULT_DATABASE_ID();
     if (!databaseId) {
       throw new Error(DATABASE_ERROR);

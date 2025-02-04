@@ -86,7 +86,7 @@ export class TeamsService {
    * @throws {AppwriteException}
    * @returns {Promise}
    */
-  // eslint-disable-next-line @typescript-eslint/ban-types
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   async delete(teamId: string): Promise<{}> {
     return this._teams.delete(teamId);
   }
@@ -228,7 +228,7 @@ export class TeamsService {
   async deleteMembership(
     teamId: string,
     membershipId: string,
-    // eslint-disable-next-line @typescript-eslint/ban-types
+    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   ): Promise<{}> {
     return this._teams?.deleteMembership(teamId, membershipId);
   }

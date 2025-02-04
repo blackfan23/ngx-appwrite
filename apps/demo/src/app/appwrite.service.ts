@@ -1,6 +1,14 @@
 import { Injectable } from '@angular/core';
 import { AppwriteAdapter } from 'ngx-appwrite';
-import { array, InferInput, number, object, parse, string } from 'valibot';
+import {
+  array,
+  fallback,
+  InferInput,
+  number,
+  object,
+  parse,
+  string,
+} from 'valibot';
 import { TEST_COLLECTION } from './app.config';
 
 // reference schema for the Appwrite base document
@@ -10,7 +18,7 @@ const AppwriteDocumentSchema = object({
   $databaseId: string(),
   $createdAt: string(),
   $updatedAt: string(),
-  $permissions: array(string()),
+  $permissions: fallback(array(string()), []),
 });
 
 // schema for friends, merges base document
@@ -28,8 +36,7 @@ export type Friend = InferInput<typeof friendSchema>;
 @Injectable({
   providedIn: 'root',
 })
-export class FriendsService extends AppwriteAdapter {
+export class FriendsService extends AppwriteAdapter<Friend> {
   protected collectionId = TEST_COLLECTION;
-  protected validationFn = <Friend>(friend: Friend) =>
-    parse(friendSchema, friend) as Friend;
+  protected validationFn = (friend: unknown) => parse(friendSchema, friend);
 }

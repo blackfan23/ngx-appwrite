@@ -10,6 +10,7 @@ like RxJS streams where appropriate.
 
 | ngx-appwrite | Appwrite-Server | Angular | Appwrite-Web SDK |
 | ------------ | --------------- | ------- | ---------------- |
+| 1.7.0        | 1.6.X           | 16+     | 17.0.0           |
 | 1.6.X        | 1.6.X           | 16+     | 16.0.0           |
 | 1.6.0        | 1.5.X           | 16+     | 15.0.0           |
 | 1.5.8        | 1.5.X           | 16+     | 15.0.0           |
@@ -121,14 +122,14 @@ export type Friend = Input<typeof friendSchema>;
 @Injectable({
   providedIn: 'root',
 })
-export class FriendsService extends AppwriteAdapter {
+export class FriendsService extends AppwriteAdapter<Friend> {
   // required
   protected collectionId = <COLLECTION_ID>;
 
   // The appwrite adapter implements CRUD operations as well as the ability to validate retrieved data. If the validationFn property is undefined, no validation of incoming data is performed.
-  protected validationFn = <Friend>(friend: Friend) =>
+  protected validationFn = (data: unknown) =>
     // validate using Valibot parse method
-    parse(friendSchema, friend) as Friend;
+    parse(friendSchema, data);
 
   // AppwriteAdapter provides the following methods
   // create
@@ -162,7 +163,7 @@ export class AppComponent implements OnInit {
 
   // login to appwrite
   async ngOnInit() {
-    this.friendsService.documentList$<Friend>().subscribe((list) => {
+    this.friendsService.documentList$().subscribe((list) => {
       console.log(
         'Friend age:',
         list.documents[0].age,
@@ -173,7 +174,7 @@ export class AppComponent implements OnInit {
       );
     });
 
-    await this.friendsService.create<Friend>({
+    await this.friendsService.create({
       name: 'Mae Sue',
       age: 18,
     });
