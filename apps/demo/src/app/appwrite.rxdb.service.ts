@@ -40,29 +40,33 @@ export type Human = InferInput<typeof humansSchema>;
 export class HumansRxdbService extends AppwriteAdapter<Human> {
   protected collectionId = 'humans';
   protected validationFn = undefined;
-  protected rxdbReplication = {
-    rxdbDatabasename: 'mydb',
-    rxdbSchema: {
-      title: 'humans',
-      version: 0,
-      primaryKey: 'id',
-      type: 'object',
-      properties: {
-        id: {
-          type: 'string',
-          maxLength: 100,
+
+  constructor() {
+    super();
+    this.activateReplication({
+      rxdbDatabasename: 'mydb',
+      rxdbSchema: {
+        title: 'humans',
+        version: 0,
+        primaryKey: 'id',
+        type: 'object',
+        properties: {
+          id: {
+            type: 'string',
+            maxLength: 100,
+          },
+          name: {
+            type: 'string',
+          },
+          age: {
+            type: 'number',
+          },
+          homeAddress: {
+            type: 'string',
+          },
         },
-        name: {
-          type: 'string',
-        },
-        age: {
-          type: 'number',
-        },
-        homeAddress: {
-          type: 'string',
-        },
+        required: ['id', 'name', 'age', 'homeAddress'],
       },
-      required: ['id', 'name', 'age', 'homeAddress'],
-    },
-  };
+    });
+  }
 }

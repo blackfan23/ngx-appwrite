@@ -40,8 +40,8 @@ export class AppComponent implements OnInit {
       console.log(account?.prefs.hello);
     });
 
-    await this.humansService.create({
-      name: 'Mae Sue',
+    const created = await this.humansService.create({
+      name: 'Mae Sue2',
       age: 18,
       homeAdress: '123 Main St',
       deleted: false,
