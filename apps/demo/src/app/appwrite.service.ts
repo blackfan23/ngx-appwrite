@@ -39,4 +39,5 @@ export type Friend = InferInput<typeof friendSchema>;
 export class FriendsService extends AppwriteAdapter<Friend> {
   protected collectionId = TEST_COLLECTION;
   protected validationFn = (friend: unknown) => parse(friendSchema, friend);
+  protected rxdbReplication = undefined;
 }

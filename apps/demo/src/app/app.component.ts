@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { Account } from 'ngx-appwrite';
+import { HumansRxdbService } from './appwrite.rxdb.service';
 import { FriendsService } from './appwrite.service';
 import { NxWelcomeComponent } from './nx-welcome.component';
 import { SECRETS } from './secrets.env';
@@ -14,6 +15,7 @@ import { SECRETS } from './secrets.env';
 export class AppComponent implements OnInit {
   private account = inject(Account);
   private friendsService = inject(FriendsService);
+  private humansService = inject(HumansRxdbService);
   title = signal(SECRETS.TITLE);
 
   // login to appwrite
@@ -38,41 +40,48 @@ export class AppComponent implements OnInit {
       console.log(account?.prefs.hello);
     });
 
-    this.friendsService.documentList$().subscribe((list) => {
-      console.log('Default list ', list.documents);
-    });
-    this.friendsService
-      .documentList$(undefined, undefined, SECRETS.ALTERNATE_DATABASE)
-      .subscribe((list) => {
-        console.log('Alternate List', list.documents);
-      });
-
-    const created = await this.friendsService.create(
-      {
-        name: 'Mae Sue',
-        age: 12,
-      },
-      [], // permissions,
-    );
-    console.log('🚀 ~ AppComponent ~ ngOnInit ~ create:', created.age);
-    console.log('🚀 ~ AppComponent ~ ngOnInit ~ create:', created.name);
-    console.log('🚀 ~ AppComponent ~ ngOnInit ~ create:', created.$id);
-
-    this.friendsService
-      .document$('65fc3f41ce84f248516d')
-      .subscribe((friend) => {
-        console.log('🚀 ~ AppComponent ~ ngOnInit ~ friend:', friend);
-        console.log(
-          '🚀 ~ AppComponent ~ ngOnInit ~ friend:',
-          friend?.$updatedAt,
-        );
-        console.log('🚀 ~ AppComponent ~ ngOnInit ~ friend:', friend?.name);
-      });
-
-    await this.friendsService.update({
-      $id: '65fc3f41ce84f248516d',
+    await this.humansService.create({
       name: 'Mae Sue',
       age: 18,
+      homeAdress: '123 Main St',
+      deleted: false,
     });
+
+    // this.friendsService.documentList$().subscribe((list) => {
+    //   console.log('Default list ', list.documents);
+    // });
+    // this.friendsService
+    //   .documentList$(undefined, undefined, SECRETS.ALTERNATE_DATABASE)
+    //   .subscribe((list) => {
+    //     console.log('Alternate List', list.documents);
+    //   });
+
+    // const created = await this.friendsService.create(
+    //   {
+    //     name: 'Mae Sue',
+    //     age: 12,
+    //   },
+    //   [], // permissions,
+    // );
+    // console.log('🚀 ~ AppComponent ~ ngOnInit ~ create:', created.age);
+    // console.log('🚀 ~ AppComponent ~ ngOnInit ~ create:', created.name);
+    // console.log('🚀 ~ AppComponent ~ ngOnInit ~ create:', created.$id);
+
+    // this.friendsService
+    //   .document$('65fc3f41ce84f248516d')
+    //   .subscribe((friend) => {
+    //     console.log('🚀 ~ AppComponent ~ ngOnInit ~ friend:', friend);
+    //     console.log(
+    //       '🚀 ~ AppComponent ~ ngOnInit ~ friend:',
+    //       friend?.$updatedAt,
+    //     );
+    //     console.log('🚀 ~ AppComponent ~ ngOnInit ~ friend:', friend?.name);
+    //   });
+
+    // await this.friendsService.update({
+    //   $id: '65fc3f41ce84f248516d',
+    //   name: 'Mae Sue',
+    //   age: 18,
+    // });
   }
 }

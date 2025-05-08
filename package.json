@@ -11,6 +11,7 @@
     "@angular/core": "~19.2.10",
     "@angular/platform-browser": "^19.2.10",
     "appwrite": "~17.0.2",
+    "rxdb": "16.11.0",
     "rxjs": "~7.8.2",
     "valibot": "1.1.0"
   },
