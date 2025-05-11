@@ -15,12 +15,12 @@ import { CLIENT, ID } from './setup';
 
 @Injectable()
 export abstract class AppwriteAdapterWithReplication<DocumentShape> {
-  protected abstract collectionId: string;
   private collection: RxCollection | undefined;
 
   // * Create and return the replication state
   public async startReplication(rxdbReplication: {
     rxdbDatabasename: string;
+    collectionId: string;
     rxdbSchema: RxJsonSchema<DocumentShape>;
   }) {
     const db = await createRxDatabase({
@@ -31,19 +31,19 @@ export abstract class AppwriteAdapterWithReplication<DocumentShape> {
     });
 
     await db.addCollections({
-      [this.collectionId]: {
+      [rxdbReplication.collectionId]: {
         schema: rxdbReplication.rxdbSchema,
       },
     });
 
-    this.collection = db[this.collectionId];
+    this.collection = db[rxdbReplication.collectionId];
 
     // start replication
     const replicationState = replicateAppwrite({
-      replicationIdentifier: `appwrite-replication-${this.collectionId}`,
+      replicationIdentifier: `appwrite-replication-${rxdbReplication.collectionId}`,
       client: CLIENT(),
       databaseId: rxdbReplication.rxdbDatabasename,
-      collectionId: this.collectionId,
+      collectionId: rxdbReplication.collectionId,
       deletedField: 'deleted', // Field that represents deletion in Appwrite
       collection: this.collection,
       pull: {

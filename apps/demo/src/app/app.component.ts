@@ -50,10 +50,17 @@ export class AppComponent implements OnInit {
       console.log('🚀 ~ AppComponent ~ ngOnInit ~ list:', list);
     });
 
-    const document$ = this.humansService.raw.document$('682099bd002041b0f543');
+    // add two humans that are 55 years old
+    await this.humansService.create({
+      name: 'Jon Doe',
+      age: 55,
+      homeAddress: '123 Main St',
+    });
 
-    document$.subscribe((document) => {
-      console.log('🚀 ~ AppComponent ~ ngOnInit ~ document:', document);
+    await this.humansService.create({
+      name: 'Jane Doe',
+      age: 55,
+      homeAddress: '123 Main St',
     });
   }
 }

@@ -17,13 +17,11 @@ export type Human = InferInput<typeof humansSchema>;
   providedIn: 'root',
 })
 export class HumansRxdbService extends AppwriteAdapterWithReplication<Human> {
-  protected collectionId = 'humans';
-  protected validationFn = undefined;
-
   constructor() {
     super();
     this.startReplication({
       rxdbDatabasename: 'mydb',
+      collectionId: 'humans',
       rxdbSchema: {
         title: 'humans',
         version: 0,
