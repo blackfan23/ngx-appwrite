@@ -40,48 +40,20 @@ export class AppComponent implements OnInit {
       console.log(account?.prefs.hello);
     });
 
-    const created = await this.humansService.create({
-      name: 'Mae Sue2',
-      age: 18,
-      homeAdress: '123 Main St',
-      deleted: false,
+    const list$ = this.humansService.raw.documentList$({
+      age: {
+        $eq: 55,
+      },
     });
 
-    // this.friendsService.documentList$().subscribe((list) => {
-    //   console.log('Default list ', list.documents);
-    // });
-    // this.friendsService
-    //   .documentList$(undefined, undefined, SECRETS.ALTERNATE_DATABASE)
-    //   .subscribe((list) => {
-    //     console.log('Alternate List', list.documents);
-    //   });
+    list$.subscribe((list) => {
+      console.log('🚀 ~ AppComponent ~ ngOnInit ~ list:', list);
+    });
 
-    // const created = await this.friendsService.create(
-    //   {
-    //     name: 'Mae Sue',
-    //     age: 12,
-    //   },
-    //   [], // permissions,
-    // );
-    // console.log('🚀 ~ AppComponent ~ ngOnInit ~ create:', created.age);
-    // console.log('🚀 ~ AppComponent ~ ngOnInit ~ create:', created.name);
-    // console.log('🚀 ~ AppComponent ~ ngOnInit ~ create:', created.$id);
+    const document$ = this.humansService.raw.document$('682099bd002041b0f543');
 
-    // this.friendsService
-    //   .document$('65fc3f41ce84f248516d')
-    //   .subscribe((friend) => {
-    //     console.log('🚀 ~ AppComponent ~ ngOnInit ~ friend:', friend);
-    //     console.log(
-    //       '🚀 ~ AppComponent ~ ngOnInit ~ friend:',
-    //       friend?.$updatedAt,
-    //     );
-    //     console.log('🚀 ~ AppComponent ~ ngOnInit ~ friend:', friend?.name);
-    //   });
-
-    // await this.friendsService.update({
-    //   $id: '65fc3f41ce84f248516d',
-    //   name: 'Mae Sue',
-    //   age: 18,
-    // });
+    document$.subscribe((document) => {
+      console.log('🚀 ~ AppComponent ~ ngOnInit ~ document:', document);
+    });
   }
 }

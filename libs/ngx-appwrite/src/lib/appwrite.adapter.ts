@@ -1,17 +1,7 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Injectable, inject } from '@angular/core';
 import { ID, Models } from 'appwrite';
-import { RxCollection, RxJsonSchema, createRxDatabase } from 'rxdb';
-import { replicateAppwrite } from 'rxdb/plugins/replication-appwrite';
-import { getRxStorageLocalstorage } from 'rxdb/plugins/storage-localstorage';
 import { Observable, map } from 'rxjs';
 import { Databases } from './databases';
-import { CLIENT } from './setup';
-
-export interface RxDBReplication {
-  rxdbDatabasename: string;
-  rxdbSchema: RxJsonSchema<any>;
-}
 
 @Injectable()
 export abstract class AppwriteAdapter<DocumentShape extends Models.Document> {
@@ -20,46 +10,6 @@ export abstract class AppwriteAdapter<DocumentShape extends Models.Document> {
   protected abstract validationFn:
     | undefined
     | ((data: unknown) => DocumentShape);
-  private collection: RxCollection | undefined = undefined;
-
-  public async activateReplication(rxdbReplication: RxDBReplication) {
-    if (rxdbReplication) {
-      const db = await createRxDatabase({
-        name: rxdbReplication.rxdbDatabasename,
-        storage: getRxStorageLocalstorage(),
-      });
-
-      await db.addCollections({
-        [this.collectionId]: {
-          schema: rxdbReplication.rxdbSchema,
-        },
-      });
-
-      this.collection = db[this.collectionId];
-
-      // start replication
-      const replicationState = replicateAppwrite({
-        replicationIdentifier: `appwrite-replication-${this.collectionId}`,
-        client: CLIENT(),
-        databaseId: rxdbReplication.rxdbDatabasename,
-        collectionId: this.collectionId,
-        deletedField: 'deleted', // Field that represents deletion in Appwrite
-        collection: this.collection,
-        pull: {
-          batchSize: 10,
-        },
-        push: {
-          batchSize: 10,
-        },
-        /*
-         * ...
-         * You can set all other options for RxDB replication states
-         * like 'live' or 'retryTime'
-         * ...
-         */
-      });
-    }
-  }
 
   /**
    * Create Document
@@ -88,29 +38,23 @@ export abstract class AppwriteAdapter<DocumentShape extends Models.Document> {
     documentId: string = ID.unique(),
     alternativeDatabaseId?: string,
   ): Promise<DocumentShape> {
-    let data: unknown;
-
-    if (this.collection) {
-      data = await this.collection.insert(awDocument);
-    } else {
-      data = await this.databases.createDocument<
-        Omit<
-          DocumentShape,
-          | '$id'
-          | '$collectionId'
-          | '$databaseId'
-          | '$updatedAt'
-          | '$createdAt'
-          | '$permissions'
-        >
-      >(
-        this.collectionId,
-        awDocument,
-        permissions,
-        documentId,
-        alternativeDatabaseId,
-      );
-    }
+    const data = await this.databases.createDocument<
+      Omit<
+        DocumentShape,
+        | '$id'
+        | '$collectionId'
+        | '$databaseId'
+        | '$updatedAt'
+        | '$createdAt'
+        | '$permissions'
+      >
+    >(
+      this.collectionId,
+      awDocument,
+      permissions,
+      documentId,
+      alternativeDatabaseId,
+    );
 
     if (this.validationFn) {
       return this.validationFn(data);
@@ -136,41 +80,17 @@ export abstract class AppwriteAdapter<DocumentShape extends Models.Document> {
     permissions: string[] = [],
     alternativeDatabaseId?: string,
   ) {
-    console.log(awDocument);
     if (!awDocument.$id) {
       throw new Error('Document must have an id');
     }
 
-    let data = undefined;
-    if (this.collection) {
-      const foundDocuments = await this.collection
-        .find({
-          selector: {
-            $id: {
-              $eq: awDocument.$id,
-            },
-          },
-        })
-        .exec();
-      console.log(
-        '🚀 ~ AppwriteAdapter<DocumentShape ~ foundDocuments:',
-        foundDocuments,
-      );
-
-      if (foundDocuments.length === 0) {
-        throw new Error('Document not found');
-      } else {
-        data = await foundDocuments[0].patch(awDocument);
-      }
-    } else {
-      data = await this.databases.updateDocument<DocumentShape>(
-        this.collectionId,
-        awDocument.$id,
-        awDocument,
-        permissions,
-        alternativeDatabaseId,
-      );
-    }
+    const data = await this.databases.updateDocument<DocumentShape>(
+      this.collectionId,
+      awDocument.$id,
+      awDocument,
+      permissions,
+      alternativeDatabaseId,
+    );
 
     if (this.validationFn) {
       return this.validationFn(data);

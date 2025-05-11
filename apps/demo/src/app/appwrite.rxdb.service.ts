@@ -1,34 +1,13 @@
 import { Injectable } from '@angular/core';
-import { AppwriteAdapter } from 'ngx-appwrite';
-import {
-  array,
-  boolean,
-  fallback,
-  InferInput,
-  number,
-  object,
-  string,
-} from 'valibot';
-
-// reference schema for the Appwrite base document
-const AppwriteDocumentSchema = object({
-  $id: string(),
-  $collectionId: string(),
-  $databaseId: string(),
-  $createdAt: string(),
-  $updatedAt: string(),
-  $permissions: fallback(array(string()), []),
-});
+import { AppwriteAdapterWithReplication } from 'ngx-appwrite';
+import { InferInput, number, object, string } from 'valibot';
 
 // schema for friends, merges base document
 const humansSchema = object({
-  ...AppwriteDocumentSchema.entries,
-  ...object({
-    name: string(),
-    age: number(),
-    homeAdress: string(),
-    deleted: boolean(),
-  }).entries,
+  id: string(),
+  name: string(),
+  age: number(),
+  homeAddress: string(),
 });
 
 // inferred type from schema
@@ -37,13 +16,13 @@ export type Human = InferInput<typeof humansSchema>;
 @Injectable({
   providedIn: 'root',
 })
-export class HumansRxdbService extends AppwriteAdapter<Human> {
+export class HumansRxdbService extends AppwriteAdapterWithReplication<Human> {
   protected collectionId = 'humans';
   protected validationFn = undefined;
 
   constructor() {
     super();
-    this.activateReplication({
+    this.startReplication({
       rxdbDatabasename: 'mydb',
       rxdbSchema: {
         title: 'humans',

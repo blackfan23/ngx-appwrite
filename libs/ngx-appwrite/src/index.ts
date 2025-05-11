@@ -1,4 +1,5 @@
 export * from './lib/account';
+export * from './lib/appwrite-with-replication.adapter';
 export * from './lib/appwrite.adapter';
 export * from './lib/avatars';
 export * from './lib/databases';
