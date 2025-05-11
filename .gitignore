@@ -13,6 +13,7 @@ apps/rxdb-demo/src/app/secrets.env.ts
 
 # IDEs and editors
 /.idea
+.npmrc
 .project
 .classpath
 .c9/
