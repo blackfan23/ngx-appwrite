@@ -106,25 +106,25 @@ export class Storage {
     rotation?: number,
     background?: string,
     output?: ImageFormat,
+    token?: string,
   ): string | null {
     try {
-      return this._storage
-        .getFilePreview(
-          bucketId,
-          fileId,
-          width,
-          height,
-          gravity,
-          quality,
-          borderWidth,
-          borderColor,
-          borderRadius,
-          opacity,
-          rotation,
-          background,
-          output,
-        )
-        .toString();
+      return this._storage.getFilePreview(
+        bucketId,
+        fileId,
+        width,
+        height,
+        gravity,
+        quality,
+        borderWidth,
+        borderColor,
+        borderRadius,
+        opacity,
+        rotation,
+        background,
+        output,
+        token,
+      );
     } catch (e) {
       if (e instanceof AppwriteException) {
         console.warn(e.message);
@@ -147,7 +147,7 @@ export class Storage {
    */
   getFileDownload(bucketId: string, fileId: string): string | null {
     try {
-      return this._storage.getFileDownload(bucketId, fileId).toString();
+      return this._storage.getFileDownload(bucketId, fileId);
     } catch (e) {
       if (e instanceof AppwriteException) {
         console.warn(e.message);
@@ -168,9 +168,13 @@ export class Storage {
    * @param fileId The file ID.
    * @returns A URL to the file.
    */
-  getFileForView(bucketId: string, fileId: string): string | null {
+  getFileForView(
+    bucketId: string,
+    fileId: string,
+    token?: string,
+  ): string | null {
     try {
-      return this._storage.getFileView(bucketId, fileId).toString();
+      return this._storage.getFileView(bucketId, fileId, token);
     } catch (e) {
       if (e instanceof AppwriteException) {
         console.warn(e.message);
