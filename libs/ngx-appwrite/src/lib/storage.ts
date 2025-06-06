@@ -1,56 +1,73 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Provider } from '@angular/core';
 import {
+  AppwriteException,
+  Storage as AppwriteStorage,
   ID,
   ImageFormat,
   ImageGravity,
   Models,
-  Storage,
   UploadProgress,
 } from 'appwrite';
-
 import { CLIENT } from './setup';
 
 @Injectable({
   providedIn: 'root',
 })
-export class StorageService {
-  private _storage: Storage = new Storage(CLIENT());
+export class Storage {
+  private readonly _storage = new AppwriteStorage(CLIENT());
 
-  /* -------------------------------- All Files ------------------------------- */
+  /**
+   * A function that wraps a promise and handles AppwriteExceptions.
+   *
+   * @param promise - The promise to wrap.
+   * @returns The result of the promise.
+   * @throws If the promise rejects with a non-AppwriteException error.
+   */
+  private async _call<T>(promise: Promise<T>): Promise<T | null> {
+    try {
+      return await promise;
+    } catch (e) {
+      if (e instanceof AppwriteException) {
+        console.warn(e.message);
+        return null;
+      }
+      throw e;
+    }
+  }
+
   /**
    * List Files
    *
    * Get a list of all the user files. You can use the query params to filter
    * your results.
    *
-   * @param {string} bucketId
-   * @param {string[]} queries
-   * @param {string} search
-   * @throws {AppwriteException}
-   * @returns {Promise}
+   * @param buckedId The bucket ID.
+   * @param queries The queries to filter the results.
+   * @param search The search string to filter the results.
+   * @returns A list of files.
    */
-  async listFiles(
+  listFiles(
     buckedId: string,
     queries?: string[],
     search?: string,
-  ): Promise<Models.FileList> {
-    return this._storage.listFiles(buckedId, queries, search);
+  ): Promise<Models.FileList | null> {
+    return this._call(this._storage.listFiles(buckedId, queries, search));
   }
-  /* -------------------------------- One File -------------------------------- */
+
   /**
    * Get File
    *
    * Get a file by its unique ID. This endpoint response returns a JSON object
    * with the file metadata.
    *
-   * @param {string} bucketId
-   * @param {string} fileId
-   * @throws {AppwriteException}
-   * @returns {Promise}
+   * @param bucketId The bucket ID.
+   * @param fileId The file ID.
+   * @returns A file.
    */
-  async getFile(bucketId: string, fileId: string): Promise<Models.File> {
-    return this._storage.getFile(bucketId, fileId);
+  getFile(bucketId: string, fileId: string): Promise<Models.File | null> {
+    return this._call(this._storage.getFile(bucketId, fileId));
   }
+
   /**
    * Get File Preview
    *
@@ -60,52 +77,61 @@ export class StorageService {
    * string arguments for cutting and resizing your preview image. Preview is
    * supported only for image files smaller than 10MB.
    *
-   * @param {string} bucketId
-   * @param {string} fileId
-   * @param {number} width
-   * @param {number} height
-   * @param {string} gravity
-   * @param {number} quality
-   * @param {number} borderWidth
-   * @param {string} borderColor
-   * @param {number} borderRadius
-   * @param {number} opacity
-   * @param {number} rotation
-   * @param {string} background
-   * @param {string} output
-   * @throws {AppwriteException}
-   * @returns {string}
+   * @param bucketId The bucket ID.
+   * @param fileId The file ID.
+   * @param width The width of the preview image.
+   * @param height The height of the preview image.
+   * @param gravity The gravity of the preview image.
+   * @param quality The quality of the preview image.
+   * @param borderWidth The border width of the preview image.
+   * @param borderColor The border color of the preview image.
+   * @param borderRadius The border radius of the preview image.
+   * @param opacity The opacity of the preview image.
+   * @param rotation The rotation of the preview image.
+   * @param background The background color of the preview image.
+   * @param output The output format of the preview image.
+   * @returns A URL to the file preview.
    */
-  async getFilePreview(
+  getFilePreview(
     bucketId: string,
     fileId: string,
-    width?: number | undefined,
-    height?: number | undefined,
-    gravity?: ImageGravity | undefined,
-    quality?: number | undefined,
-    borderWidth?: number | undefined,
-    borderColor?: string | undefined,
-    borderRadius?: number | undefined,
-    opacity?: number | undefined,
-    rotation?: number | undefined,
-    background?: string | undefined,
-    output?: ImageFormat | undefined,
-  ): Promise<string> {
-    return this._storage.getFilePreview(
-      bucketId,
-      fileId,
-      width,
-      height,
-      gravity,
-      quality,
-      borderWidth,
-      borderColor,
-      borderRadius,
-      opacity,
-      rotation,
-      background,
-      output,
-    );
+    width?: number,
+    height?: number,
+    gravity?: ImageGravity,
+    quality?: number,
+    borderWidth?: number,
+    borderColor?: string,
+    borderRadius?: number,
+    opacity?: number,
+    rotation?: number,
+    background?: string,
+    output?: ImageFormat,
+  ): string | null {
+    try {
+      return this._storage
+        .getFilePreview(
+          bucketId,
+          fileId,
+          width,
+          height,
+          gravity,
+          quality,
+          borderWidth,
+          borderColor,
+          borderRadius,
+          opacity,
+          rotation,
+          background,
+          output,
+        )
+        .toString();
+    } catch (e) {
+      if (e instanceof AppwriteException) {
+        console.warn(e.message);
+        return null;
+      }
+      throw e;
+    }
   }
 
   /**
@@ -115,13 +141,20 @@ export class StorageService {
    * 'Content-Disposition: attachment' header that tells the browser to start
    * downloading the file to user downloads directory.
    *
-   * @param {string} bucketId
-   * @param {string} fileId
-   * @throws {AppwriteException}
-   * @returns {string}
+   * @param bucketId The bucket ID.
+   * @param fileId The file ID.
+   * @returns A URL to the file.
    */
-  async getFileDownload(bucketId: string, fileId: string): Promise<string> {
-    return this._storage.getFileDownload(bucketId, fileId);
+  getFileDownload(bucketId: string, fileId: string): string | null {
+    try {
+      return this._storage.getFileDownload(bucketId, fileId).toString();
+    } catch (e) {
+      if (e instanceof AppwriteException) {
+        console.warn(e.message);
+        return null;
+      }
+      throw e;
+    }
   }
 
   /**
@@ -131,16 +164,22 @@ export class StorageService {
    * download method but returns with no  'Content-Disposition: attachment'
    * header.
    *
-   * @param {string} bucketId
-   * @param {string} fileId
-   * @throws {AppwriteException}
-   * @returns {string}
+   * @param bucketId The bucket ID.
+   * @param fileId The file ID.
+   * @returns A URL to the file.
    */
-  async getFileForView(bucketId: string, fileId: string): Promise<string> {
-    return this._storage.getFileView(bucketId, fileId);
+  getFileForView(bucketId: string, fileId: string): string | null {
+    try {
+      return this._storage.getFileView(bucketId, fileId).toString();
+    } catch (e) {
+      if (e instanceof AppwriteException) {
+        console.warn(e.message);
+        return null;
+      }
+      throw e;
+    }
   }
 
-  /* ------------------------------- Create File ------------------------------ */
   /**
    * Create File
    *
@@ -163,66 +202,77 @@ export class StorageService {
    * chunking logic will be managed by the SDK internally.
    *
    *
-   * @param {string} bucketId
-   * @param {string} fileId
-   * @param {File} file
-   * @param {string[]} permissions
-   * @throws {AppwriteException}
-   * @returns {Promise}
+   * @param bucketId The bucket ID.
+   * @param file The file to create.
+   * @param fileId The file ID.
+   * @param permissions The permissions for the file.
+   * @param onProgress A callback to track the upload progress.
+   * @returns The created file.
    */
-  async createFile(
+  createFile(
     bucketId: string,
     file: File,
     fileId: string = ID.unique(),
     permissions?: string[],
     onProgress?: (progress: UploadProgress) => void,
-  ): Promise<Models.File> {
-    return this._storage.createFile(
-      bucketId,
-      fileId,
-      file,
-      permissions,
-      onProgress,
+  ): Promise<Models.File | null> {
+    return this._call(
+      this._storage.createFile(bucketId, fileId, file, permissions, onProgress),
     );
   }
 
-  /* ------------------------------- UpdatePermissions ------------------------------ */
   /**
-   * Update File
+   * Update File Permissions
    *
    * Update a file by its unique ID. Only users with write permissions have
    * access to update this resource.
    *
-   * @param {string} bucketId
-   * @param {string} fileId
-   * @param {string | undefined} name
-   * @param {string[]} permissions
-   * @throws {AppwriteException}
-   * @returns {Promise}
+   * @param bucketId The bucket ID.
+   * @param fileId The file ID.
+   * @param name The new name for the file.
+   * @param permissions The new permissions for the file.
+   * @returns The updated file.
    */
-  async updateFilePermissions(
+  updateFilePermissions(
     bucketId: string,
     fileId: string,
     name?: string,
     permissions?: string[],
-  ): Promise<Models.File> {
-    return this._storage.updateFile(bucketId, fileId, name, permissions);
+  ): Promise<Models.File | null> {
+    return this._call(
+      this._storage.updateFile(bucketId, fileId, name, permissions),
+    );
   }
 
-  /* ------------------------------- Delete File ------------------------------ */
   /**
    * Delete File
    *
    * Delete a file by its unique ID. Only users with write permissions have
    * access to delete this resource.
    *
-   * @param {string} bucketId
-   * @param {string} fileId
-   * @throws {AppwriteException}
-   * @returns {Promise}
+   * @param bucketId The bucket ID.
+   * @param fileId The file ID.
+   * @returns An empty object.
    */
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-  async deleteFile(bucketId: string, fileId: string): Promise<{}> {
-    return this._storage.deleteFile(bucketId, fileId);
+  deleteFile(
+    bucketId: string,
+    fileId: string,
+  ): Promise<Record<string, never> | null> {
+    return this._call(this._storage.deleteFile(bucketId, fileId));
   }
 }
+
+/**
+ * An alias for the Storage class.
+ */
+export const StorageService = Storage;
+
+/**
+ * A provider for the Storage class.
+ */
+export const provideStorage = (): Provider => {
+  return {
+    provide: Storage,
+    useClass: Storage,
+  };
+};

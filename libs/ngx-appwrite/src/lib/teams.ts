@@ -1,12 +1,29 @@
-import { Injectable } from '@angular/core';
-import { ID, Models, Teams } from 'appwrite';
+import { Injectable, Provider } from '@angular/core';
+import {
+  AppwriteException,
+  Teams as AppwriteTeams,
+  ID,
+  Models,
+} from 'appwrite';
 import { CLIENT } from './setup';
 
 @Injectable({
   providedIn: 'root',
 })
-export class TeamsService {
-  private _teams: Teams = new Teams(CLIENT());
+export class Team {
+  private readonly _teams = new AppwriteTeams(CLIENT());
+
+  private async _call<T>(promise: Promise<T>): Promise<T | null> {
+    try {
+      return await promise;
+    } catch (e: unknown) {
+      if (e instanceof AppwriteException) {
+        console.error(e.message);
+        return null;
+      }
+      throw e;
+    }
+  }
 
   /**
    * Create Team
@@ -15,81 +32,81 @@ export class TeamsService {
    * assigned as the owner of the team. Only the users with the owner role can
    * invite new members, add new owners and delete or update the team.
    *
-   * @param {string} teamId
-   * @param {string} name
-   * @param {string[]} roles
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.Team<TPrefs>>}
+   * @param name The team's name.
+   * @param roles The team's roles.
+   * @param teamId The team's ID.
+   * @returns The created team.
    */
-  async create<TPrefs extends Models.Preferences>(
+  create<TPrefs extends Models.Preferences>(
     name: string,
     roles?: string[],
     teamId: string = ID.unique(),
-  ): Promise<Models.Team<TPrefs>> {
-    return this._teams?.create<TPrefs>(teamId, name, roles);
+  ): Promise<Models.Team<TPrefs> | null> {
+    return this._call(this._teams.create<TPrefs>(teamId, name, roles));
   }
+
   /**
    * List Teams
    *
    * Get a list of all the teams in which the current user is a member. You can
    * use the parameters to filter your results.
    *
-   * @param {string[]} queries
-   * @param {string} search
-   * @throws {Promise<Models.TeamList<TPrefs>>}
-   * @returns {Promise}
+   * @param queries The queries to filter the results.
+   * @param search The search string to filter the results.
+   * @returns A list of teams.
    */
-  async list<TPrefs extends Models.Preferences>(
-    queries?: string[] | undefined,
-    search?: string | undefined,
-  ): Promise<Models.TeamList<TPrefs>> {
-    return this._teams?.list<TPrefs>(queries, search);
+  list<TPrefs extends Models.Preferences>(
+    queries?: string[],
+    search?: string,
+  ): Promise<Models.TeamList<TPrefs> | null> {
+    return this._call(this._teams.list<TPrefs>(queries, search));
   }
+
   /**
    * Get Team
    *
    * Get a team by its ID. All team members have read access for this resource.
    *
-   * @param {string} teamId
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.Team<TPrefs>>}
+   * @param teamId The team's ID.
+   * @returns A team.
    */
-  async get<TPrefs extends Models.Preferences>(
+  get<TPrefs extends Models.Preferences>(
     teamId: string,
-  ): Promise<Models.Team<TPrefs>> {
-    return this._teams?.get<TPrefs>(teamId);
+  ): Promise<Models.Team<TPrefs> | null> {
+    return this._call(this._teams.get<TPrefs>(teamId));
   }
+
   /**
    * Update Team Name
    *
    * Update a team name using its ID. Only members with the owner role can update the
    * team.
    *
-   * @param {string} teamId
-   * @param {string} name
-   * @throws {AppwriteException}
-   * @returns {Promise}
+   * @param teamId The team's ID.
+   * @param name The new name for the team.
+   * @returns The updated team.
    */
-  async updateName<TPrefs extends Models.Preferences>(
+  updateName<TPrefs extends Models.Preferences>(
     teamId: string,
     name: string,
-  ): Promise<Models.Team<TPrefs>> {
-    return this._teams?.updateName<TPrefs>(teamId, name);
+  ): Promise<Models.Team<TPrefs> | null> {
+    return this._call(this._teams.updateName<TPrefs>(teamId, name));
   }
+
   /**
    * Delete Team
    *
    * Delete a team using its ID. Only team members with the owner role can
    * delete the team.
    *
-   * @param {string} teamId
-   * @throws {AppwriteException}
-   * @returns {Promise}
+   * @param teamId The team's ID.
+   * @returns An empty object.
    */
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-  async delete(teamId: string): Promise<{}> {
-    return this._teams.delete(teamId);
+  async delete(teamId: string): Promise<Record<string, never> | null> {
+    const result = await this._call(this._teams.delete(teamId));
+    return result === undefined ? {} : result;
   }
+
   /**
    * Create Team Membership
    *
@@ -109,59 +126,69 @@ export class TeamsService {
    * the only valid redirect URL's are the once from domains you have set when
    * adding your platforms in the console interface.
    *
-   * @param {string} teamId
-   * @param {string} email
-   * @param {string[]} roles
-   * @param {string} url
-   * @param {string} name
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.Membership>}
+   * @param teamId The team's ID.
+   * @param email The email of the new member.
+   * @param roles The roles of the new member.
+   * @param url The URL to redirect the user to after accepting the invitation.
+   * @param name The name of the new member.
+   * @returns The created membership.
    */
-  async createMembership(
+  createMembership(
     teamId: string,
+    email: string,
     roles: string[],
-    email?: string,
-    url?: string,
-    name?: string | undefined,
-  ): Promise<Models.Membership> {
-    return this._teams?.createMembership(teamId, roles, email, url, name);
+    url: string,
+    name?: string,
+  ): Promise<Models.Membership | null> {
+    return this._call(
+      this._teams.createMembership(
+        teamId,
+        roles,
+        email,
+        undefined,
+        undefined,
+        url,
+        name,
+      ),
+    );
   }
+
   /**
    * List Team Memberships
    *
    * Use this endpoint to list a team's members using the team's ID. All team
    * members have read access to this endpoint.
    *
-   * @param {string} teamId
-   * @param {string[]} queries
-   * @param {string} search
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.MembershipList>}
+   * @param teamId The team's ID.
+   * @param queries The queries to filter the results.
+   * @param search The search string to filter the results.
+   * @returns A list of memberships.
    */
-  async listMemberships(
+  listMemberships(
     teamId: string,
-    queries?: string[] | undefined,
-    search?: string | undefined,
-  ): Promise<Models.MembershipList> {
-    return this._teams?.listMemberships(teamId, queries, search);
+    queries?: string[],
+    search?: string,
+  ): Promise<Models.MembershipList | null> {
+    return this._call(this._teams.listMemberships(teamId, queries, search));
   }
+
   /**
    * Get Team Membership
    *
    * Get a team member by the membership unique id. All team members have read
    * access for this resource.
    *
-   * @param {string} teamId
-   * @param {string} membershipId
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.Membership>}
+   * @param teamId The team's ID.
+   * @param membershipId The membership ID.
+   * @returns A membership.
    */
-  async getMembership(
+  getMembership(
     teamId: string,
     membershipId: string,
-  ): Promise<Models.Membership> {
-    return this._teams?.getMembership(teamId, membershipId);
+  ): Promise<Models.Membership | null> {
+    return this._call(this._teams.getMembership(teamId, membershipId));
   }
+
   /**
    * Update Membership
    *
@@ -169,19 +196,21 @@ export class TeamsService {
    * have access to this endpoint. Learn more about [roles and
    * permissions](/docs/permissions).
    *
-   * @param {string} teamId
-   * @param {string} membershipId
-   * @param {string[]} roles
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.Membership>}
+   * @param teamId The team's ID.
+   * @param membershipId The membership ID.
+   * @param roles The new roles for the member.
+   * @returns The updated membership.
    */
-  async updateMembership(
+  updateMembership(
     teamId: string,
     membershipId: string,
     roles: string[],
-  ): Promise<Models.Membership> {
-    return this._teams?.updateMembership(teamId, membershipId, roles);
+  ): Promise<Models.Membership | null> {
+    return this._call(
+      this._teams.updateMembership(teamId, membershipId, roles),
+    );
   }
+
   /**
    * Update Team Membership Status
    *
@@ -193,26 +222,23 @@ export class TeamsService {
    * created.
    *
    *
-   * @param {string} teamId
-   * @param {string} membershipId
-   * @param {string} userId
-   * @param {string} secret
-   * @throws {AppwriteException}
-   * @returns {Promise}
+   * @param teamId The team's ID.
+   * @param membershipId The membership ID.
+   * @param userId The user's ID.
+   * @param secret The secret from the invitation.
+   * @returns The updated membership.
    */
-  async updateMembershipStatus(
+  updateMembershipStatus(
     teamId: string,
     membershipId: string,
     userId: string,
     secret: string,
-  ): Promise<Models.Membership> {
-    return this._teams?.updateMembershipStatus(
-      teamId,
-      membershipId,
-      userId,
-      secret,
+  ): Promise<Models.Membership | null> {
+    return this._call(
+      this._teams.updateMembershipStatus(teamId, membershipId, userId, secret),
     );
   }
+
   /**
    * Delete Team Membership
    *
@@ -220,16 +246,26 @@ export class TeamsService {
    * the membership of any other team member. You can also use this endpoint to
    * delete a user membership even if it is not accepted.
    *
-   * @param {string} teamId
-   * @param {string} membershipId
-   * @throws {AppwriteException}
-   * @returns {Promise}
+   * @param teamId The team's ID.
+   * @param membershipId The membership ID.
+   * @returns An empty object.
    */
   async deleteMembership(
     teamId: string,
     membershipId: string,
-    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-  ): Promise<{}> {
-    return this._teams?.deleteMembership(teamId, membershipId);
+  ): Promise<Record<string, never> | null> {
+    const result = await this._call(
+      this._teams.deleteMembership(teamId, membershipId),
+    );
+    return result === undefined ? {} : result;
   }
 }
+
+export const TeamsService = Team;
+
+export const provideTeams = (): Provider => {
+  return {
+    provide: Team,
+    useClass: Team,
+  };
+};

@@ -1,6 +1,6 @@
 import {
   ApplicationConfig,
-  provideExperimentalZonelessChangeDetection,
+  provideZonelessChangeDetection,
 } from '@angular/core';
 import { provideAppwrite } from 'ngx-appwrite';
 import { addRxPlugin } from 'rxdb';
@@ -11,10 +11,6 @@ addRxPlugin(RxDBDevModePlugin);
 
 // test data for later
 export const TEST_COLLECTION = '65fc3a62a07dbc4f3dc8';
-export const TEST_DATA = {
-  name: 'John Doe',
-  age: 33,
-};
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -23,6 +19,6 @@ export const appConfig: ApplicationConfig = {
       project: SECRETS.PROJECT_ID,
       defaultDatabase: SECRETS.DEFAULT_DATABASE,
     }),
-    provideExperimentalZonelessChangeDetection(),
+    provideZonelessChangeDetection(),
   ],
 };

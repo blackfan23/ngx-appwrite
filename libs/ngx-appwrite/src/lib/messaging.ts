@@ -1,43 +1,85 @@
-import { Injectable } from '@angular/core';
-import { Messaging, Models } from 'appwrite';
+import { Injectable, Provider } from '@angular/core';
+import {
+  AppwriteException,
+  Messaging as AppwriteMessaging,
+  Models,
+} from 'appwrite';
 import { CLIENT } from './setup';
 
 @Injectable({
   providedIn: 'root',
 })
-export class MessagingService {
-  private _messaging: Messaging = new Messaging(CLIENT());
+export class Messaging {
+  private readonly _messaging = new AppwriteMessaging(CLIENT());
+
+  /**
+   * A function that wraps a promise and handles AppwriteExceptions.
+   *
+   * @param promise - The promise to wrap.
+   * @returns The result of the promise.
+   * @throws If the promise rejects with a non-AppwriteException error.
+   *
+   */
+  private async _call<T>(promise: Promise<T>): Promise<T | null> {
+    try {
+      return await promise;
+    } catch (e) {
+      if (e instanceof AppwriteException) {
+        console.warn(e.message);
+        return null;
+      }
+      throw e;
+    }
+  }
 
   /**
    * Create subscriber
    *
    * Create a new subscriber.
    *
-   * @param {string} topicId
-   * @param {string} subscriberId
-   * @param {string} targetId
-   * @throws {AppwriteException}
-   * @returns {Promise}
+   * @param topicId The topic ID.
+   * @param subscriberId The subscriber ID.
+   * @param targetId The target ID.
+   * @returns The created subscriber.
    */
   createSubscriber(
     topicId: string,
     subscriberId: string,
     targetId: string,
-  ): Promise<Models.Subscriber> {
-    return this._messaging.createSubscriber(topicId, subscriberId, targetId);
+  ): Promise<Models.Subscriber | null> {
+    return this._call(
+      this._messaging.createSubscriber(topicId, subscriberId, targetId),
+    );
   }
+
   /**
    * Delete subscriber
    *
    * Delete a subscriber by its unique ID.
    *
-   * @param {string} topicId
-   * @param {string} subscriberId
-   * @throws {AppwriteException}
-   * @returns {Promise}
+   * @param topicId The topic ID.
+   * @param subscriberId The subscriber ID.
+   * @returns An empty object.
    */
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-  deleteSubscriber(topicId: string, subscriberId: string): Promise<{}> {
-    return this._messaging.deleteSubscriber(topicId, subscriberId);
+  deleteSubscriber(
+    topicId: string,
+    subscriberId: string,
+  ): Promise<Record<string, never> | null> {
+    return this._call(this._messaging.deleteSubscriber(topicId, subscriberId));
   }
 }
+
+/**
+ * An alias for the Messaging class.
+ */
+export const MessagingService = Messaging;
+
+/**
+ * A provider for the Messaging class.
+ */
+export const provideMessaging = (): Provider => {
+  return {
+    provide: Messaging,
+    useClass: Messaging,
+  };
+};

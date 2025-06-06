@@ -24,17 +24,17 @@ export class AppComponent implements OnInit {
       this.title.set('no title');
     }, 2500);
 
-    try {
-      const account = await this.account.get<{ hello: string }>();
-      console.log(account.prefs.hello);
-    } catch (error) {
-      console.log(error);
+    let account = await this.account.get<{ hello: string }>();
+    if (!account) {
       // login if account can't be retrieved
       await this.account.createEmailPasswordSession(
         SECRETS.EMAIL,
         SECRETS.PASSWORD,
       );
+      account = await this.account.get<{ hello: string }>();
     }
+
+    console.log(account?.prefs.hello);
 
     this.account.onAuth<{ hello: string }>().subscribe((account) => {
       console.log(account?.prefs.hello);

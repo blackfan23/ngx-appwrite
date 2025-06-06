@@ -167,8 +167,13 @@ export abstract class AppwriteAdapter<DocumentShape extends Models.Document> {
     const data = await this.databases.getDocument<DocumentShape>(
       this.collectionId,
       documentId,
+      [],
       alternativeDatabaseId,
     );
+
+    if (!data) {
+      throw new Error(`Document with id ${documentId} not found`);
+    }
 
     if (this.validationFn) {
       return this.validationFn(data);
@@ -185,6 +190,13 @@ export abstract class AppwriteAdapter<DocumentShape extends Models.Document> {
       queries,
       alternativeDatabaseId,
     );
+
+    if (!list) {
+      return {
+        total: 0,
+        documents: [],
+      };
+    }
 
     const validationFn = this.validationFn;
 
@@ -208,6 +220,12 @@ export abstract class AppwriteAdapter<DocumentShape extends Models.Document> {
       )
       .pipe(
         map((list) => {
+          if (!list) {
+            return {
+              total: 0,
+              documents: [],
+            };
+          }
           const validationFn = this.validationFn;
 
           if (validationFn) {
