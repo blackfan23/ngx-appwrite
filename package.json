@@ -3,9 +3,11 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
-    "release:patch": "cp ./README.md ./libs/ngx-appwrite/README.md && cp ./changelog.md ./libs/ngx-appwrite/changelog.md && cd ./libs/ngx-appwrite && npm version patch && cd .. && cd .. && nx build ngx-appwrite --prod && cd ./dist/libs/ngx-appwrite && npm publish",
-    "release:experimental": "cp ./README.md ./libs/ngx-appwrite/README.md && cp ./changelog.md ./libs/ngx-appwrite/changelog.md && cd ./libs/ngx-appwrite && npm version patch && cd .. && cd .. && nx build ngx-appwrite --prod && cd ./dist/libs/ngx-appwrite && npm publish --registry https://verdaccio.nas4.us",
-    "release:no-patch": "cp ./README.md ./libs/ngx-appwrite/README.md && cp ./changelog.md ./libs/ngx-appwrite/changelog.md && cd ./libs/ngx-appwrite && cd .. && cd .. && nx build ngx-appwrite --prod && cd ./dist/libs/ngx-appwrite && npm publish"
+    "release:experimental": "cp ./README.md ./libs/ngx-appwrite/README.md && cp ./changelog.md ./libs/ngx-appwrite/changelog.md && cd ./libs/ngx-appwrite && cd .. && cd .. && nx build ngx-appwrite --prod && cd ./dist/libs/ngx-appwrite && npm publish --registry https://verdaccio.nas4.us",
+    "release:experimental:patch": "cp ./README.md ./libs/ngx-appwrite/README.md && cp ./changelog.md ./libs/ngx-appwrite/changelog.md && cd ./libs/ngx-appwrite && npm version patch && cd .. && cd .. && nx build ngx-appwrite --prod && cd ./dist/libs/ngx-appwrite && npm publish --registry https://verdaccio.nas4.us",
+    "unpublish:experimental": "cd ./libs/ngx-appwrite && npm unpublish --registry https://verdaccio.nas4.us",
+    "release:npm:no-patch": "cp ./README.md ./libs/ngx-appwrite/README.md && cp ./changelog.md ./libs/ngx-appwrite/changelog.md && cd ./libs/ngx-appwrite && cd .. && cd .. && nx build ngx-appwrite --prod && cd ./dist/libs/ngx-appwrite && npm publish",
+    "release:npm:patch": "cp ./README.md ./libs/ngx-appwrite/README.md && cp ./changelog.md ./libs/ngx-appwrite/changelog.md && cd ./libs/ngx-appwrite && npm version patch && cd .. && cd .. && nx build ngx-appwrite --prod && cd ./dist/libs/ngx-appwrite && npm publish"
   },
   "private": true,
   "dependencies": {

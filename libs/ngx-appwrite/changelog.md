@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.7.4] - 2025-06-07
+
+- Implemented RXDB local replication (also known as offline persistence) using the secondary entrypoint ngx-appwrite/replication (see the README).
+- Updated the Appwrite Web SDK to version 18.1.1, which works with server version 1.7.4.
+- Remove the search parameter from the listExecutions method.
+- Added a token parameter to the getFilePreview and getFileView methods for file token usage.
+- Updated dependencies.
+
 ## [1.7.0] - 2025-02-04
 
 - **BREAKING**: AppwriteAdapter class now takes a generic type. This simplifies the use of all methods inside, which don't need to be passed a generic type anymore. (See README.md for instructions)
