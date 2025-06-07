@@ -11,11 +11,19 @@ import {
 import { replicateAppwrite } from 'rxdb/plugins/replication-appwrite';
 import { getRxStorageLocalstorage } from 'rxdb/plugins/storage-localstorage';
 import { wrappedValidateAjvStorage } from 'rxdb/plugins/validate-ajv';
-import { map, Observable } from 'rxjs';
+import {
+  BehaviorSubject,
+  filter,
+  firstValueFrom,
+  map,
+  Observable,
+  switchMap,
+} from 'rxjs';
 
 @Injectable()
 export abstract class AppwriteAdapterWithReplication<DocumentShape> {
-  private collection: RxCollection | undefined;
+  private _collection: RxCollection | undefined;
+  private _isReady$ = new BehaviorSubject<boolean>(false);
 
   // * Create and return the replication state
   public async startReplication(rxdbReplication: {
@@ -36,7 +44,7 @@ export abstract class AppwriteAdapterWithReplication<DocumentShape> {
       },
     });
 
-    this.collection = db[rxdbReplication.collectionId];
+    this._collection = db[rxdbReplication.collectionId];
 
     // start replication
     const replicationState = replicateAppwrite({
@@ -45,7 +53,7 @@ export abstract class AppwriteAdapterWithReplication<DocumentShape> {
       databaseId: rxdbReplication.rxdbDatabasename,
       collectionId: rxdbReplication.collectionId,
       deletedField: 'deleted', // Field that represents deletion in Appwrite
-      collection: this.collection,
+      collection: this._collection,
       pull: {
         batchSize: 10,
       },
@@ -59,7 +67,7 @@ export abstract class AppwriteAdapterWithReplication<DocumentShape> {
        * ...
        */
     });
-
+    this._isReady$.next(true);
     return replicationState;
   }
 
@@ -68,7 +76,7 @@ export abstract class AppwriteAdapterWithReplication<DocumentShape> {
   ): Promise<RxDocument<DocumentShape>> {
     this._checkForCollection();
 
-    const document: RxDocument<DocumentShape> = await this.collection!.insert({
+    const document: RxDocument<DocumentShape> = await this._collection!.insert({
       id: ID.unique(),
       ...data,
     });
@@ -90,7 +98,12 @@ export abstract class AppwriteAdapterWithReplication<DocumentShape> {
   ): Promise<RxDocument<DocumentShape>> {
     this._checkForCollection();
 
-    const document: RxDocument<DocumentShape> = await this.collection!.upsert(
+    // make sure the document has an id
+    if (!(data as any).id) {
+      (data as any).id = ID.unique();
+    }
+
+    const document: RxDocument<DocumentShape> = await this._collection!.upsert(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       data as Partial<any>,
     );
@@ -111,7 +124,7 @@ export abstract class AppwriteAdapterWithReplication<DocumentShape> {
   ): Promise<RxDocument<DocumentShape> | null> {
     this._checkForCollection();
 
-    const foundDocuments = await this.collection!.find({
+    const foundDocuments = await this._collection!.find({
       selector: {
         id:
           typeof idOrQuery === 'string'
@@ -131,7 +144,8 @@ export abstract class AppwriteAdapterWithReplication<DocumentShape> {
   public async documentList(
     queryObj?: MangoQuerySelector<DocumentShape> | undefined,
   ): Promise<RxDocument<DocumentShape>[]> {
-    const foundDocuments = await this.collection!.find({
+    await firstValueFrom(this._isReady$);
+    const foundDocuments = await this._collection!.find({
       selector: queryObj,
     }).exec();
 
@@ -141,9 +155,14 @@ export abstract class AppwriteAdapterWithReplication<DocumentShape> {
   public documentList$(
     queryObj?: MangoQuerySelector<DocumentShape> | undefined,
   ): Observable<RxDocument<DocumentShape>[]> {
-    const documentList$ = this.collection!.find({
-      selector: queryObj,
-    }).$;
+    const documentList$ = this._isReady$.pipe(
+      filter(Boolean),
+      switchMap(() => {
+        return this._collection!.find({
+          selector: queryObj,
+        }).$;
+      }),
+    );
 
     return documentList$;
   }
@@ -151,9 +170,14 @@ export abstract class AppwriteAdapterWithReplication<DocumentShape> {
   public document$(
     queryObj?: string | MangoQuerySelector<DocumentShape> | undefined,
   ): Observable<RxDocument<DocumentShape> | null> {
-    const documentList$ = this.collection!.find({
-      selector: typeof queryObj === 'string' ? { id: queryObj } : queryObj,
-    }).$;
+    const documentList$ = this._isReady$.pipe(
+      filter(Boolean),
+      switchMap(() => {
+        return this._collection!.find({
+          selector: typeof queryObj === 'string' ? { id: queryObj } : queryObj,
+        }).$;
+      }),
+    );
 
     return documentList$.pipe(map((documents) => documents[0] ?? null));
   }
@@ -214,7 +238,7 @@ export abstract class AppwriteAdapterWithReplication<DocumentShape> {
   };
 
   private _checkForCollection() {
-    if (!this.collection) {
+    if (!this._collection) {
       throw new Error(
         'RxDB collection not found, did you remember to call startReplication and are the ids for the database and collection the same on your appwrite server?',
       );

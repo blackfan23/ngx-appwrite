@@ -7,6 +7,7 @@ import { addRxPlugin } from 'rxdb';
 import { RxDBDevModePlugin } from 'rxdb/plugins/dev-mode';
 import { SECRETS } from './secrets.env';
 
+// this is always dev mode, so we can see the logs
 addRxPlugin(RxDBDevModePlugin);
 
 // test data for later

@@ -4,10 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [1.7.4] - 2025-06-07
 
-- // Implement rxdb local storage
-  // changes to server to match 1.7.4
-- Remove search param from listExecutions method
-- Add token param to getFilePreview and getFileView for File tokens usage
+- Implemented RXDB local replication (also known as offline persistence) using the secondary entrypoint ngx-appwrite/replication (see the README).
+- Updated the Appwrite Web SDK to version 18.1.1, which works with server version 1.7.4.
+- Remove the search parameter from the listExecutions method.
+- Added a token parameter to the getFilePreview and getFileView methods for file token usage.
+- Updated dependencies.
 
 ## [1.7.0] - 2025-02-04
 

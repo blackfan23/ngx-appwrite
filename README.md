@@ -10,16 +10,20 @@ like RxJS streams where appropriate.
 
 | ngx-appwrite | Appwrite-Server | Angular | Appwrite-Web SDK |
 | ------------ | --------------- | ------- | ---------------- |
+| 1.7.4        | 1.7.X           | 19+     | 18.1.1           |
 | 1.7.0        | 1.6.X           | 16+     | 17.0.0           |
 | 1.6.X        | 1.6.X           | 16+     | 16.0.0           |
-| 1.6.0        | 1.5.X           | 16+     | 15.0.0           |
-| 1.5.8        | 1.5.X           | 16+     | 15.0.0           |
-| 1.5.X        | 1.5.X           | 16+     | 14.0.1           |
 
 ## Installation
 
 ```bash
   npm install ngx-appwrite
+```
+
+If you want to use Data replication with RxDB with RXDB (see [here](https://appwrite.io/integrations/replication-rxdb)) you need to install the RXDB dependencies as well
+
+```bash
+  npm install rxdb
 ```
 
 ---
@@ -46,7 +50,7 @@ export const appConfig: ApplicationConfig = {
 };
 ```
 
-2 - Alternative A: Use the appwrite services to access the SDK
+### Alternative A: Use the appwrite services directly to access the SDK
 
 ```javascript
 import { Component, OnInit, inject } from '@angular/core';
@@ -74,8 +78,8 @@ export class AppComponent implements OnInit {
       console.log(session);
 
       // provide the prefs structure
-      const account = await this.account.get<{ hello: string }>();
-      console.log(account.prefs.hello);
+      const account: Models.User<{ hello: string }> | null = await this.account.get<{ hello: string }>();
+      console.log(account?.prefs.hello);
       // output 'world'
 
        // observable stream on the users auth session
@@ -87,7 +91,7 @@ export class AppComponent implements OnInit {
 }
 ```
 
-2 - Alternative B: Use the service adapter to connect to collections
+### Alternative B: Use the service adapter to connect to collections
 
 ```javascript
 // friends.service.ts
@@ -177,6 +181,106 @@ export class AppComponent implements OnInit {
     await this.friendsService.create({
       name: 'Mae Sue',
       age: 18,
+    });
+  }
+}
+```
+
+### Alternative C: Use the RXDB replication adapter for an offline-first approach.
+
+Make sure you name your Appwrite databases and collections correctly according to the [official Docs](https://appwrite.io/integrations/replication-rxdb)
+
+```javascript
+// friends.service.ts
+import { Injectable } from '@angular/core';
+import { AppwriteAdapterWithReplication } from 'ngx-appwrite/replication';
+
+// inferred type from schema
+export interface Human {
+  id: string;
+  name: string;
+  age: number;
+  homeAddress: string;
+}
+
+@Injectable({
+  providedIn: 'root',
+})
+export class HumansRxdbService extends AppwriteAdapterWithReplication<Human> {
+  constructor() {
+    super();
+    this.startReplication({
+      rxdbDatabasename: 'mydb',
+      collectionId: 'humans',
+      rxdbSchema: {
+        title: 'humans',
+        version: 0,
+        primaryKey: 'id',
+        type: 'object',
+        properties: {
+          id: {
+            type: 'string',
+            maxLength: 100,
+          },
+          name: {
+            type: 'string',
+          },
+          age: {
+            type: 'number',
+          },
+          homeAddress: {
+            type: 'string',
+          },
+        },
+        required: ['id', 'name', 'age', 'homeAddress'],
+      },
+    });
+  }
+}
+```
+
+Use the HumansService in your component
+
+```javascript
+[...]
+export class HumanComponent {
+  private formBuilder = inject(FormBuilder);
+  private humansService = inject(HumansRxdbService);
+
+  humanForm = this.formBuilder.group({
+    id: [''],
+    name: ['', Validators.required],
+    age: [0, Validators.required],
+    homeAddress: ['', Validators.required],
+  });
+
+  humans$: Observable<RxDocument<Human>[]> = this.humansService.documentList$();
+
+  saveHuman(): void {
+    if (this.humanForm.valid) {
+      const humanData = this.humanForm.getRawValue();
+      if (!humanData.id) {
+        delete (humanData as Partial<Human>).id;
+      }
+      this.humansService.upsert(humanData as Human);
+      this.resetForm();
+    }
+  }
+
+  editHuman(human: RxDocument<Human>): void {
+    this.humanForm.patchValue(human.toJSON());
+  }
+
+  deleteHuman(human: RxDocument<Human>): void {
+    human.remove();
+  }
+
+  resetForm(): void {
+    this.humanForm.reset({
+      id: '',
+      name: '',
+      age: 0,
+      homeAddress: '',
     });
   }
 }
