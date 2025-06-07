@@ -1,6 +1,7 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Provider } from '@angular/core';
 import {
   Account as AppwriteAccount,
+  AppwriteException,
   AuthenticationFactor,
   AuthenticatorType,
   ID,
@@ -12,7 +13,7 @@ import {
   Subject,
   debounceTime,
   distinctUntilChanged,
-  map,
+  from,
   merge,
   of,
   shareReplay,
@@ -30,14 +31,16 @@ export class Account {
   /*                                    Setup                                   */
   /* -------------------------------------------------------------------------- */
 
-  private _account!: AppwriteAccount;
-  private _client$ = of(CLIENT()).pipe(shareReplay(1));
-  private _watchAuthChannel$ = this._client$.pipe(
+  private readonly _account = new AppwriteAccount(CLIENT());
+  private readonly _client$ = of(CLIENT()).pipe(shareReplay(1));
+  private readonly _watchAuthChannel$ = this._client$.pipe(
     switchMap((client) => watch(client, 'account').pipe(startWith(null))),
   );
-  private _triggerManualAuthCheck$ = new Subject<boolean>();
+  private readonly _triggerManualAuthCheck$ = new Subject<boolean>();
 
-  private _auth$: unknown | undefined;
+  private _auth$:
+    | Observable<Models.User<Models.Preferences> | null>
+    | undefined;
 
   /* -------------------------------------------------------------------------- */
   /*                                  Reactive                                  */
@@ -47,31 +50,28 @@ export class Account {
     this._account = new AppwriteAccount(CLIENT());
   }
 
+  /**
+   * Emits the currently logged in user, or null if no user is logged in.
+   *
+   * @template TPrefs - The type of the user's preferences.
+   * @returns An observable that emits the currently logged in user, or null.
+   */
   onAuth<
     TPrefs extends Models.Preferences,
   >(): Observable<Models.User<TPrefs> | null> {
-    try {
-      if (!this._auth$) {
-        this._auth$ = merge(
-          this._watchAuthChannel$,
-          this._triggerManualAuthCheck$,
-        ).pipe(
-          switchMap(() => this._checkIfAuthExists()),
-          debounceTime(50),
-          map((account) => {
-            if (!account) return null;
-            return account as Models.User<TPrefs>;
-          }),
-          distinctUntilChanged(deepEqual),
-          shareReplay(1),
-        );
-      }
-
-      return this._auth$ as Observable<Models.User<TPrefs> | null>;
-    } catch (error) {
-      console.error('Error in Account > onAuth');
-      throw error;
+    if (!this._auth$) {
+      this._auth$ = merge(
+        this._watchAuthChannel$,
+        this._triggerManualAuthCheck$,
+      ).pipe(
+        switchMap(() => from(this.get<TPrefs>())),
+        debounceTime(50),
+        distinctUntilChanged(deepEqual),
+        shareReplay(1),
+      );
     }
+
+    return this._auth$ as Observable<Models.User<TPrefs> | null>;
   }
 
   /* -------------------------------------------------------------------------- */
@@ -83,17 +83,13 @@ export class Account {
    *
    * Get currently logged in user data as JSON object.
    *
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.User<TPrefs>>}
+   * @template TPrefs The type of the user's preferences.
+   * @returns The user's data.
    */
-  async get<TPrefs extends Models.Preferences>() {
-    try {
-      const account = await this._account.get();
-      return account as Models.User<TPrefs>;
-    } catch (error) {
-      console.error('Error fetching account');
-      throw error;
-    }
+  get<
+    TPrefs extends Models.Preferences,
+  >(): Promise<Models.User<TPrefs> | null> {
+    return this._call(this._account.get<TPrefs>());
   }
 
   /**
@@ -104,14 +100,12 @@ export class Account {
    * to start verifying the user email address. To allow the new user to login to their new account,
    * you need to create a new account session.
    *
-   * @param {string} email
-   * @param {string} password
-   * @param {Models.Preferences} defaultPrefs
-   * @param {string} name
-   * @param {string} userId
-   * Defaults to ID.unique()
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.User<T>>}
+   * @param email The user's email address.
+   * @param password The user's password.
+   * @param defaultPrefs The user's default preferences.
+   * @param name The user's name.
+   * @param userId The user's ID.
+   * @returns The newly created user.
    */
   async create<T extends Models.Preferences>(
     email: string,
@@ -119,10 +113,15 @@ export class Account {
     defaultPrefs: T = {} as T,
     name?: string,
     userId: string = ID.unique(),
-  ): Promise<Models.User<T>> {
-    const account = await this._account.create(userId, email, password, name);
-    this.triggerAuthCheck();
-    await this.updatePrefs(defaultPrefs);
+  ): Promise<Models.User<T> | null> {
+    const account = await this._call(
+      this._account.create(userId, email, password, name),
+    );
+    if (account) {
+      this.triggerAuthCheck();
+      await this.updatePrefs(defaultPrefs);
+    }
+
     return account as Models.User<T>;
   }
 
@@ -138,16 +137,15 @@ export class Account {
    * by passing an email address and a new password.
    *
    *
-   * @param {string} email
-   * @param {string} password
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.User<TPrefs>>}
+   * @param email The user's new email address.
+   * @param password The user's password.
+   * @returns The updated user.
    */
-  async updateEmail<TPrefs extends Models.Preferences>(
+  updateEmail<TPrefs extends Models.Preferences>(
     email: string,
     password: string,
-  ): Promise<Models.User<TPrefs>> {
-    return this._account.updateEmail(email, password);
+  ): Promise<Models.User<TPrefs> | null> {
+    return this._call(this._account.updateEmail(email, password));
   }
 
   /**
@@ -156,12 +154,11 @@ export class Account {
    * Get the list of identities for the currently logged in user.
    *
    *
-   * @param {string[]} queries
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.IdentityList>}
+   * @param queries An array of queries to filter the results.
+   * @returns The list of identities.
    */
-  async listIdentities(queries: string[] = []): Promise<Models.IdentityList> {
-    return this._account.listIdentities(queries);
+  listIdentities(queries: string[] = []): Promise<Models.IdentityList | null> {
+    return this._call(this._account.listIdentities(queries));
   }
 
   /**
@@ -169,14 +166,13 @@ export class Account {
    *
    * Delete a user identity by id.
    *
-   *
-   * @param {string} id
-   * @throws {AppwriteException}
-   * @returns {Promise<{}>}
+   * @param id The ID of the identity to delete.
+   * @returns An empty object.
    */
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-  async deleteIdentity(id: string): Promise<{}> {
-    return this._account.deleteIdentity(id);
+  async deleteIdentity(id: string): Promise<Record<string, never> | null> {
+    const result = await this._call(this._account.deleteIdentity(id));
+
+    return result === undefined ? {} : result;
   }
 
   /**
@@ -188,11 +184,10 @@ export class Account {
    * from its creation and will be invalid if the user will logout in that time
    * frame.
    *
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.Jwt>}
+   * @returns A JSON Web Token.
    */
-  async createJWT(): Promise<Models.Jwt> {
-    return await this._account.createJWT();
+  createJWT(): Promise<Models.Jwt | null> {
+    return this._call(this._account.createJWT());
   }
 
   /**
@@ -201,12 +196,11 @@ export class Account {
    * Get the list of latest security activity logs for the currently logged in user.
    * Each log returns user IP address, location and date and time of log.
    *
-   * @param {string[]} queries
-   * @throws {AppwriteException}
-   * @returns {Promise<AppwriteLogListObject>}
+   * @param queries An array of queries to filter the results.
+   * @returns A list of security logs.
    */
-  async listLogs(queries: string[] = []): Promise<Models.LogList> {
-    return this._account.listLogs(queries);
+  listLogs(queries: string[] = []): Promise<Models.LogList | null> {
+    return this._call(this._account.listLogs(queries));
   }
 
   /**
@@ -214,14 +208,13 @@ export class Account {
    *
    * Enable or disable MFA on an account.
    *
-   * @param {boolean} enableMFA
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.User<TPrefs>>}
+   * @param enableMFA Whether to enable or disable MFA.
+   * @returns The updated user.
    */
-  async updateMFA<TPrefs extends Models.Preferences>(
+  updateMFA<TPrefs extends Models.Preferences>(
     enableMFA: boolean,
-  ): Promise<Models.User<TPrefs>> {
-    return this._account.updateMFA(enableMFA);
+  ): Promise<Models.User<TPrefs> | null> {
+    return this._call(this._account.updateMFA(enableMFA));
   }
 
   /**
@@ -230,11 +223,12 @@ export class Account {
    * Add an authenticator app to be used as an MFA factor.
    * Verify the authenticator using the verify authenticator method.
    *
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.MfaType>}
+   * @returns The MFA type.
    */
-  async createMfaAuthenticator(): Promise<Models.MfaType> {
-    return this._account.createMfaAuthenticator(AuthenticatorType.Totp);
+  createMfaAuthenticator(): Promise<Models.MfaType | null> {
+    return this._call(
+      this._account.createMfaAuthenticator(AuthenticatorType.Totp),
+    );
   }
 
   /**
@@ -242,123 +236,108 @@ export class Account {
    *
    * Verify an authenticator app after adding it using the add authenticator method.
    *
-   * @param {string} otp
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.User<TPrefs>>}
+   * @param otp The one-time password from the authenticator app.
+   * @returns An empty object.
    */
-  async updateMfaAuthenticator<TPrefs extends Models.Preferences>(
+  updateMfaAuthenticator<TPrefs extends Models.Preferences>(
     otp: string,
-  ): Promise<Models.User<TPrefs>> {
-    return this._account.updateMfaAuthenticator(
-      AuthenticatorType.Totp, // type
-      otp, // otp
+  ): Promise<Models.User<TPrefs> | null> {
+    return this._call(
+      this._account.updateMfaAuthenticator(AuthenticatorType.Totp, otp),
     );
   }
 
   /**
    * Delete Authenticator
    *
-   * Delete an authenticator for a user.
-   * Verify the authenticator using the verify authenticator method.
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.User<TPrefs>>}
+   * Delete an authenticator app.
+   *
+   * @returns An empty object.
    */
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-  async deleteMfaAuthenticator(): Promise<{}> {
-    return this._account.deleteMfaAuthenticator(AuthenticatorType.Totp);
+  async deleteMfaAuthenticator(): Promise<Record<string, never> | null> {
+    const result = await this._call(
+      this._account.deleteMfaAuthenticator(AuthenticatorType.Totp),
+    );
+
+    return result === undefined ? {} : result;
   }
 
   /**
-   * Create 2FA Challenge
+   * Create Challenge
    *
-   * Begin the process of MFA verification after sign-in.
-   * Finish the flow with updateMfaChallenge method.
+   * Create a challenge to be solved before continuing to a protected route.
    *
-   * @param {AuthenticationFactor} factor
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.MfaChallenge>}
+   * @param factor The authentication factor to use for the challenge.
+   * @returns The MFA challenge.
    */
-  async createMfaChallenge(
+  createMfaChallenge(
     factor: AuthenticationFactor,
-  ): Promise<Models.MfaChallenge> {
-    return this._account.createMfaChallenge(factor);
+  ): Promise<Models.MfaChallenge | null> {
+    return this._call(this._account.createMfaChallenge(factor));
   }
 
   /**
-   * Create MFA Challenge (confirmation)
+   * Verify Challenge
    *
-   * Complete the MFA challenge by providing the one-time password.
-   * Finish the process of MFA verification by providing the one-time password.
-   * To begin the flow, use createMfaChallenge method.
+   * Verify a challenge to continue to a protected route.
    *
-   * @param {string} challengeId
-   * @param {string} otp
-   * @throws {AppwriteException}
-   * @returns {Promise<{}>}
+   * @param challengeId The ID of the challenge to verify.
+   * @param otp The one-time password from the authenticator app.
+   * @returns An empty object.
    */
   async updateMfaChallenge(
     challengeId: string,
     otp: string,
+  ): Promise<Models.Session | null> {
+    const result = await this._call(
+      this._account.updateMfaChallenge(challengeId, otp),
+    );
 
-    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-  ): Promise<{}> {
-    return this._account.updateMfaChallenge(challengeId, otp);
+    return result === undefined ? null : result;
   }
 
   /**
    * List Factors
    *
-   * List the factors available on the account to be used as a MFA challange.
+   * List the available MFA factors for the current user.
    *
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.MfaFactors>}
+   * @returns A list of MFA factors.
    */
-  async listMfaFactors(): Promise<Models.MfaFactors> {
-    return this._account.listMfaFactors();
+  listMfaFactors(): Promise<Models.MfaFactors | null> {
+    return this._call(this._account.listMfaFactors());
   }
 
   /**
-   * Get MFA Recovery Codes
+   * Get Recovery Codes
    *
-   * Get recovery codes that can be used as backup for MFA flow.
-   * Before getting codes, they must be generated using createMfaRecoveryCodes method.
-   * An OTP challenge is required to read recovery codes.
+   * Get the recovery codes for the current user.
    *
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.MfaRecoveryCodes>}
+   * @returns A list of MFA recovery codes.
    */
-  async getMfaRecoveryCodes(): Promise<Models.MfaRecoveryCodes> {
-    return this._account.getMfaRecoveryCodes();
+  getMfaRecoveryCodes(): Promise<Models.MfaRecoveryCodes | null> {
+    return this._call(this._account.getMfaRecoveryCodes());
   }
 
   /**
-   * Create MFA Recovery Codes
+   * Create Recovery Codes
    *
-   * Generate recovery codes as backup for MFA flow.
-   * It's recommended to generate and show then immediately after user
-   * successfully adds their authehticator. Recovery codes can be used as a MFA
-   * verification type in createMfaChallenge method.
+   * Create a new set of recovery codes for the current user.
    *
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.MfaRecoveryCodes>}
+   * @returns A list of MFA recovery codes.
    */
-  async createMfaRecoveryCodes(): Promise<Models.MfaRecoveryCodes> {
-    return this._account.createMfaRecoveryCodes();
+  createMfaRecoveryCodes(): Promise<Models.MfaRecoveryCodes | null> {
+    return this._call(this._account.createMfaRecoveryCodes());
   }
 
   /**
-   * Regenerate MFA Recovery Codes
+   * Update Recovery Codes
    *
-   * Regenerate recovery codes that can be used as backup for MFA flow.
-   * Before regenerating codes, they must be first generated using
-   * createMfaRecoveryCodes method. An OTP challenge is required to regenreate
-   * recovery codes.
+   * Update the recovery codes for the current user.
    *
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.MfaRecoveryCodes>}
+   * @returns A list of MFA recovery codes.
    */
-  async updateMfaRecoveryCodes(): Promise<Models.MfaRecoveryCodes> {
-    return this._account.updateMfaRecoveryCodes();
+  updateMfaRecoveryCodes(): Promise<Models.MfaRecoveryCodes | null> {
+    return this._call(this._account.updateMfaRecoveryCodes());
   }
 
   /**
@@ -366,229 +345,183 @@ export class Account {
    *
    * Update currently logged in user account name.
    *
-   * @param {string} name
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.User<TPrefs>>}
+   * @param name The user's new name.
+   * @returns The updated user.
    */
-  async updateName<TPrefs extends Models.Preferences>(
+  updateName<TPrefs extends Models.Preferences>(
     name: string,
-  ): Promise<Models.User<TPrefs>> {
-    return this._account.updateName(name);
+  ): Promise<Models.User<TPrefs> | null> {
+    return this._call(this._account.updateName(name));
   }
 
   /**
    * Update Password
    *
-   * Update currently logged in user password. For validation, user is required
-   * to pass in the new password, and the old password. For users created with
-   * OAuth, Team Invites and Magic URL, oldPassword is optional.
+   * Update currently logged in user account password.
+   * For validation, user is required to pass the password twice.
    *
-   * @param {string} password
-   * @param {string} oldPassword
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.User<TPrefs>>}
+   * @param password The user's new password.
+   * @param oldPassword The user's old password.
+   * @returns The updated user.
    */
-  async updatePassword<TPrefs extends Models.Preferences>(
+  updatePassword<TPrefs extends Models.Preferences>(
     password: string,
     oldPassword?: string,
-  ): Promise<Models.User<TPrefs>> {
-    return this._account.updatePassword(password, oldPassword);
+  ): Promise<Models.User<TPrefs> | null> {
+    return this._call(this._account.updatePassword(password, oldPassword));
   }
 
   /**
    * Update Phone
    *
-   * Update the currently logged in user's phone number. After updating the
-   * phone number, the phone verification status will be reset. A confirmation
-   * SMS is not sent automatically, however you can use the [POST
-   * /account/verification/phone](/docs/client/account#accountCreatePhoneVerification)
-   * endpoint to send a confirmation SMS.
+   * Update currently logged in user account phone number.
    *
-   * @param {string} phoneNumber
-   * @param {string} password
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.User<TPrefs>>}
+   * @param phoneNumber The user's new phone number.
+   * @param password The user's password.
+   * @returns The updated user.
    */
-  async updatePhone<TPrefs extends Models.Preferences>(
+  updatePhone<TPrefs extends Models.Preferences>(
     phoneNumber: string,
     password: string,
-  ): Promise<Models.User<TPrefs>> {
-    return this._account.updatePhone(phoneNumber, password);
+  ): Promise<Models.User<TPrefs> | null> {
+    return this._call(this._account.updatePhone(phoneNumber, password));
   }
 
   /**
-   * Get Account Preferences
+   * Get Preferences
    *
-   * Get the preferences as a key-value object for the currently logged in user.
+   * Get currently logged in user preferences as a JSON object.
    *
-   * @throws {AppwriteException}
-   * @returns {Promise<TPrefs>}
+   * @returns The user's preferences.
    */
-  async getPrefs<TPrefs extends Models.Preferences>(): Promise<TPrefs> {
-    return this._account.getPrefs() as Promise<TPrefs>;
+  getPrefs<TPrefs extends Models.Preferences>(): Promise<TPrefs | null> {
+    return this._call(this._account.getPrefs<TPrefs>());
   }
 
   /**
    * Update Preferences
    *
-   * Update currently logged in user account preferences. The object you pass is
-   * stored as is, and replaces any previous value. The maximum allowed prefs
-   * size is 64kB and throws error if exceeded.
+   * Update currently logged in user preferences.
+   * You can pass only the specific settings you wish to update.
    *
-   * @param {object} prefs
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.User<TPrefs>>}
+   * @param prefs The user's new preferences.
+   * @returns The updated user.
    */
-  async updatePrefs<TPrefs extends Models.Preferences>(
+  updatePrefs<TPrefs extends Models.Preferences>(
     prefs: TPrefs,
-  ): Promise<Models.User<TPrefs>> {
-    return this._account.updatePrefs(prefs) as Promise<Models.User<TPrefs>>;
+  ): Promise<Models.User<TPrefs> | null> {
+    return this._call(this._account.updatePrefs<TPrefs>(prefs));
   }
 
   /**
-   * Create Password Recovery
+   * Create Recovery
    *
    * Sends the user an email with a temporary secret key for password reset.
-   * When the user clicks the confirmation link he is redirected back to your
-   * app password reset URL with the secret key and email address values
-   * attached to the URL query string. Use the query string params to submit a
-   * request to the [PUT
-   * /account/recovery](/docs/client/account#accountUpdateRecovery) endpoint to
-   * complete the process. The verification link sent to the user's email
-   * address is valid for 1 hour.
    *
-   * @param {string} email
-   * @param {string} url
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.Token>}
+   * @param email The user's email address.
+   * @param url The URL to redirect the user to after the password reset.
+   * @returns A token object.
    */
-  async createRecovery(email: string, url: string): Promise<Models.Token> {
-    const result = await this._account.createRecovery(email, url);
-    this.triggerAuthCheck();
-    return result;
+  createRecovery(email: string, url: string): Promise<Models.Token | null> {
+    return this._call(this._account.createRecovery(email, url));
   }
 
   /**
-   * Create Password Recovery (confirmation)
+   * Update Recovery
    *
-   * Use this endpoint to complete the user account password reset. Both the
-   * **userId** and **secret** arguments will be passed as query parameters to
-   * the redirect URL you have provided when sending your request to the [POST
-   * /account/recovery](/docs/client/account#accountCreateRecovery) endpoint.
+   * Use this endpoint to complete the user account password reset.
    *
-   * Please note that in order to avoid a [Redirect
-   * Attack](https://github.com/OWASP/CheatSheetSeries/blob/master/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.md)
-   * the only valid redirect URLs are the ones from domains you have set when
-   * adding your platforms in the console interface.
-   *
-   * @param {string} userId
-   * @param {string} secret
-   * @param {string} password
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.Toke>}
+   * @param userId The user's ID.
+   * @param secret The secret key from the recovery email.
+   * @param password The user's new password.
+   * @returns A token object.
    */
-  async updateRecovery(
+  updateRecovery(
     userId: string,
     secret: string,
     password: string,
-  ): Promise<Models.Token> {
-    const result = await this._account.updateRecovery(userId, secret, password);
-    this.triggerAuthCheck();
-    return result;
+  ): Promise<Models.Token | null> {
+    return this._call(this._account.updateRecovery(userId, secret, password));
   }
 
   /**
    * List Sessions
    *
-   * Get currently logged in user list of active sessions across different
-   * devices.
+   * Get the list of all the user sessions.
    *
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.SessionList>}
+   * @returns A list of sessions.
    */
-  async listSessions(): Promise<Models.SessionList> {
-    return this._account.listSessions();
+  listSessions(): Promise<Models.SessionList | null> {
+    return this._call(this._account.listSessions());
   }
 
   /**
    * Delete Sessions
    *
-   * Delete all sessions from the user account and remove any sessions cookies
-   * from the end client.
+   * Delete all the user sessions.
    *
-   * @throws {AppwriteException}
-   * @returns {Promise<{}>}
+   * @returns An empty object.
    */
-  async deleteSessions(): // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-  Promise<{}> {
-    const result = await this._account.deleteSessions();
+  async deleteSessions(): Promise<Record<string, never> | null> {
+    const deleted = await this._call(this._account.deleteSessions());
     this.triggerAuthCheck();
-    return result;
+
+    return deleted === undefined ? {} : deleted;
   }
 
   /**
    * Create Anonymous Session
    *
-   * Use this endpoint to allow a new user to register an anonymous account in
-   * your project. This route will also create a new session for the user. To
-   * allow the new user to convert an anonymous account to a normal account, you
-   * need to update its [email and
-   * password](/docs/client/account#accountUpdateEmail) or create an [OAuth2
-   * session](/docs/client/account#accountCreateOAuth2Session).
+   * Use this endpoint to create a new anonymous account.
+   * After the user registration completes successfully, you can use the
+   * /account/verfication route to start verifying the user email address.
+   * To allow the new user to login to their new account,
+   * you need to create a new account session.
    *
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.Session>}
+   * @returns A session object.
    */
-  async createAnonymousSession(): Promise<Models.Session> {
-    const session = await this._account.createAnonymousSession();
+  async createAnonymousSession(): Promise<Models.Session | null> {
+    const session = await this._call(this._account.createAnonymousSession());
     this.triggerAuthCheck();
     return session;
   }
 
   /**
-   * Create email password session
+   * Create Email/Password Session
    *
-   * Allow the user to login into their account by providing a valid email and
-   * password combination. This route will create a new session for the user.
+   * Allow the user to login into his account by providing his email and password.
    *
-   * A user is limited to 10 active sessions at a time by default. [Learn more
-   * about session limits](/docs/authentication#limits).
-   *
-   * @param {string} email
-   * @param {string} password
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.Session>}
+   * @param email The user's email address.
+   * @param password The user's password.
+   * @returns A session object.
    */
   async createEmailPasswordSession(
     email: string,
     password: string,
-  ): Promise<Models.Session> {
-    const session = await this._account.createEmailPasswordSession(
-      email,
-      password,
+  ): Promise<Models.Session | null> {
+    const session = await this._call(
+      this._account.createEmailPasswordSession(email, password),
     );
     this.triggerAuthCheck();
     return session;
   }
 
   /**
-   * Create Magic URL session (confirmation)
+   * Update Magic URL Session
    *
-   * Use this endpoint to create a session from token.
-   * Provide the userId and secret parameters from the successful response
-   * of authentication flows initiated by token creation. For example,
-   * magic URL and phone login.
+   * Use this endpoint to login the user with a magic URL.
    *
-   * @param {string} userId
-   * @param {string} secret
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.Session>}
+   * @param userId The user's ID.
+   * @param secret The secret from the magic URL.
+   * @returns A session object.
    */
   async updateMagicURLSession(
     userId: string,
     secret: string,
-  ): Promise<Models.Session> {
-    const session = await this._account.updateMagicURLSession(userId, secret);
+  ): Promise<Models.Session | null> {
+    const session = await this._call(
+      this._account.updateMagicURLSession(userId, secret),
+    );
     this.triggerAuthCheck();
     return session;
   }
@@ -596,28 +529,14 @@ export class Account {
   /**
    * Create OAuth2 Session
    *
-   * Allow the user to login to their account using the OAuth2 provider of their
-   * choice. Each OAuth2 provider should be enabled from the Appwrite console
-   * first. Use the success and failure arguments to provide a redirect URL's
-   * back to your app when login is completed.
+   * Allow the user to login to his account using the OAuth2 provider of his choice.
+   * Each OAuth2 provider should be enabled from the Appwrite console.
    *
-   * If there is already an active session, the new session will be attached to
-   * the logged-in account. If there are no active sessions, the server will
-   * attempt to look for a user with the same email address as the email
-   * received from the OAuth2 provider and attach the new session to the
-   * existing user. If no matching user is found - the server will create a new
-   * user.
-   *
-   * A user is limited to 10 active sessions at a time by default. [Learn more
-   * about session limits](/docs/authentication#limits).
-   *
-   *
-   * @param {OAuthProvider} provider
-   * @param {string} success
-   * @param {string} failure
-   * @param {string[]} scopes
-   * @throws {AppwriteException}
-   * @returns {void|string}
+   * @param provider The OAuth2 provider to use.
+   * @param success The URL to redirect the user to after a successful login.
+   * @param failure The URL to redirect the user to after a failed login.
+   * @param scopes An array of scopes to request.
+   * @returns The OAuth2 session.
    */
   async createOAuth2Session(
     provider: OAuthProvider,
@@ -625,285 +544,202 @@ export class Account {
     failure?: string,
     scopes?: string[],
   ): Promise<string | void> {
-    const url = this._account.createOAuth2Session(
-      provider,
-      success,
-      failure,
-      scopes,
-    );
-    return url;
+    this._account.createOAuth2Session(provider, success, failure, scopes);
+    this.triggerAuthCheck();
   }
 
   /**
-   * Update phone session
+   * Update Phone Session
    *
-   * Use this endpoint to create a session from token.
-   * Provide the userId and secret parameters from the successful
-   * response of authentication flows initiated by token creation.
-   * For example, magic URL and phone login.
+   * Use this endpoint to login the user with a phone number and secret.
    *
-   * @param {string} userId
-   * @param {string} secret
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.Session>}
+   * @param userId The user's ID.
+   * @param secret The secret from the SMS.
+   * @returns A session object.
    */
   async updatePhoneSession(
     userId: string,
     secret: string,
-  ): Promise<Models.Session> {
-    const session = await this._account.updatePhoneSession(userId, secret);
+  ): Promise<Models.Session | null> {
+    const session = await this._call(
+      this._account.updatePhoneSession(userId, secret),
+    );
     this.triggerAuthCheck();
     return session;
   }
 
   /**
-   * Create session
+   * Create Session
    *
-   * Use this endpoint to create a session from token.
-   * Provide the userId and secret parameters from the successful
-   * response of authentication flows initiated by token creation.
-   * For example, magic URL and phone login.
+   * Use this endpoint to create a new session.
    *
-   * @param {string} userId
-   * @param {string} secret
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.Session>}
+   * @param userId The user's ID.
+   * @param secret The secret from the token.
+   * @returns A session object.
    */
-  async createSession(userId: string, secret: string): Promise<Models.Session> {
-    const session = await this._account.createSession(userId, secret);
-    this.triggerAuthCheck();
-    return session;
+  createSession(
+    userId: string,
+    secret: string,
+  ): Promise<Models.Session | null> {
+    return this._call(this._account.createSession(userId, secret));
   }
 
   /**
    * Get Session
    *
-   * Use this endpoint to get a logged in user's session using a Session ID.
-   * Inputting 'current' will return the current session being used.
+   * Get the session for the current user.
    *
-   * @param {string} sessionId
-   * default is 'current' session
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.Session>}
+   * @param sessionId The ID of the session to get.
+   * @returns A session object.
    */
-  async getSession(sessionId = 'current'): Promise<Models.Session> {
-    try {
-      const session = await this._account.getSession(sessionId);
-      return session;
-    } catch (error) {
-      throw new Error(
-        `Could not retrieve Appwrite session for id: ${sessionId} `,
-      );
-    }
+  getSession(sessionId = 'current'): Promise<Models.Session | null> {
+    return this._call(this._account.getSession(sessionId));
   }
 
   /**
-   * Update session
+   * Update Session
    *
-   * Use this endpoint to extend a session's length.
-   * Extending a session is useful when session expiry is short.
-   * If the session was created using an OAuth provider,
-   * this endpoint refreshes the access token from the provider.
+   * Update the session for the current user.
    *
-   * @param {string} sessionId
-   * defaults to 'current'
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.Session>}
+   * @param sessionId The ID of the session to update.
+   * @returns A session object.
    */
-  async updateSession(sessionId = 'current'): Promise<Models.Session> {
-    const result = await this._account.updateSession(sessionId);
-    this.triggerAuthCheck();
-    return result;
+  updateSession(sessionId = 'current'): Promise<Models.Session | null> {
+    return this._call(this._account.updateSession(sessionId));
   }
 
   /**
    * Delete Session
    *
-   * Logout the user. Use 'current' as the session ID to logout on this device,
-   * use a session ID to logout on another device.
-   * If you're looking to logout the user on all devices, use Delete Sessions instead.
+   * Delete the session for the current user.
    *
-   *
-   * @param {string} sessionId
-   * defaults to 'current'
-   * @throws {AppwriteException}
-   * @returns {Promise<{}>}
+   * @param sessionId The ID of the session to delete.
+   * @returns An empty object.
    */
   async deleteSession(
     sessionId = 'current',
-  ): // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-  Promise<{}> {
-    const result = await this._account.deleteSession(sessionId);
+  ): Promise<Record<string, never> | null> {
+    const deleted = await this._call(this._account.deleteSession(sessionId));
     this.triggerAuthCheck();
-    return result;
+
+    return deleted === undefined ? {} : deleted;
   }
 
   /**
-   * Update status
+   * Update Status
    *
-   * Block the currently logged in user account. Behind the scene, the user
-   * record is not deleted but permanently blocked from any access. To
-   * completely delete a user, use the Users API instead.
+   * Update the user's status.
    *
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.User<TPrefs>>}
+   * @returns The updated user.
    */
-  async updateStatus<TPrefs extends Models.Preferences>(): Promise<
-    Models.User<TPrefs>
-  > {
-    const account = await this._account.updateStatus();
-    this.triggerAuthCheck();
-    return account as Models.User<TPrefs>;
+  updateStatus<
+    TPrefs extends Models.Preferences,
+  >(): Promise<Models.User<TPrefs> | null> {
+    return this._call(this._account.updateStatus());
   }
 
   /**
-   * Create push target
+   * Create Push Target
    *
-   * No description at this moment
+   * Create a new push target for the current user.
    *
-   * @param {string} targetId
-   * @param {string} identifier
-   * @param {string} providerId
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.Target>}
+   * @param targetId The ID of the push target.
+   * @param identifier The identifier of the push target.
+   * @param providerId The ID of the provider to use.
+   * @returns A push target object.
    */
-  async createPushTarget(
+  createPushTarget(
     targetId: string,
     identifier: string,
     providerId?: string,
-  ): Promise<Models.Target> {
-    const account = await this._account.createPushTarget(
-      targetId,
-      identifier,
-      providerId,
+  ): Promise<Models.Target | null> {
+    return this._call(
+      this._account.createPushTarget(targetId, identifier, providerId),
     );
-    this.triggerAuthCheck();
-    return account;
   }
 
   /**
-   * Update push target
+   * Update Push Target
    *
-   * No description at this moment
+   * Update a push target for the current user.
    *
-   * @param {string} targetId
-   * @param {string} identifier
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.Target>}
+   * @param targetId The ID of the push target.
+   * @param identifier The identifier of the push target.
+   * @returns A push target object.
    */
-  async updatePushTarget(
+  updatePushTarget(
     targetId: string,
     identifier: string,
-  ): Promise<Models.Target> {
-    const account = await this._account.updatePushTarget(targetId, identifier);
-    this.triggerAuthCheck();
-    return account;
+  ): Promise<Models.Target | null> {
+    return this._call(this._account.updatePushTarget(targetId, identifier));
   }
 
   /**
-   * Delete push target
+   * Delete Push Target
    *
-   * No description at this moment
+   * Delete a push target for the current user.
    *
-   * @param {string} targetId
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.Target>}
+   * @param targetId The ID of the push target.
+   * @returns An empty object.
    */
   async deletePushTarget(
     targetId: string,
-    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-  ): Promise<{}> {
-    const account = await this._account.deletePushTarget(targetId);
-    this.triggerAuthCheck();
-    return account;
+  ): Promise<Record<string, never> | null> {
+    const result = await this._call(this._account.deletePushTarget(targetId));
+
+    return result === undefined ? {} : result;
   }
 
   /**
-   * Create email token (OTP)
+   * Create Email Token
    *
-   * Sends the user an email with a secret key for creating a session.
-   * If the provided user ID has not be registered, a new user will be created.
-   *  Use the returned user ID and secret and submit a request to the
-   * POST /v1/account/sessions/token endpoint to complete the login process.
-   * The secret sent to the user's email is valid for 15 minutes.
+   * Use this endpoint to create a new email token.
    *
-   * A user is limited to 10 active sessions at a time by default. Learn more about session limits.
-   *
-   * @param {string} userId
-   * @param {string} email
-   * @param {boolean} phrase
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.Token>}
+   * @param userId The user's ID.
+   * @param email The user's email address.
+   * @param phrase Whether to use a phrase or a secret.
+   * @returns A token object.
    */
-  async createEmailToken(
+  createEmailToken(
     userId: string,
     email: string,
     phrase = false,
-  ): Promise<Models.Token> {
-    const account = await this._account.createEmailToken(userId, email, phrase);
-    this.triggerAuthCheck();
-    return account;
+  ): Promise<Models.Token | null> {
+    return this._call(this._account.createEmailToken(userId, email, phrase));
   }
 
   /**
-   * Create magic URL token
+   * Create Magic URL Token
    *
-   * Sends the user an email with a secret key for creating a session.
-   * If the provided user ID has not been registered, a new user will be created.
-   * When the user clicks the link in the email, the user is redirected back to
-   * the URL you provided with the secret key and userId values attached to
-   * the URL query string. Use the query string parameters to submit a request
-   * to the POST /v1/account/sessions/token endpoint to complete the login process.
+   * Use this endpoint to create a new magic URL token.
    *
-   * The link sent to the user's email address is valid for 1 hour.
-   * If you are on a mobile device you can leave the URL parameter empty,
-   * so that the login completion will be handled by your Appwrite instance
-   * by default.
-   *
-   * A user is limited to 10 active sessions at a time by default. Learn more about session limits.
-   *
-   * @param {string} userId
-   * @param {string} email
-   * @param {string} url
-   * Defaults to ID.unique()
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.Token>}
+   * @param email The user's email address.
+   * @param url The URL to redirect the user to after the magic URL is used.
+   * @param userId The user's ID.
+   * @param phrase Whether to use a phrase or a secret.
+   * @returns A token object.
    */
-  async createMagicURLToken(
+  createMagicURLToken(
     email: string,
     url?: string,
     userId: string = ID.unique(),
     phrase = true,
-  ): Promise<Models.Token> {
-    const session = await this._account.createMagicURLToken(
-      userId,
-      email,
-      url,
-      phrase,
+  ): Promise<Models.Token | null> {
+    return this._call(
+      this._account.createMagicURLToken(userId, email, url, phrase),
     );
-    this.triggerAuthCheck();
-    return session;
   }
 
   /**
-   * Create OAuth2 token
+   * Create OAuth2 Token
    *
-   * Allow the user to login to their account using the OAuth2 provider of their choice.
-   *  Each OAuth2 provider should be enabled from the Appwrite console first.
-   * Use the success and failure arguments to provide a redirect URL's back to
-   * your app when login is completed.
+   * Use this endpoint to create a new OAuth2 token.
    *
-   * If authentication succeeds, userId and secret of a token will be appended to the success URL as query parameters. These can be used to create a new session using the Create session endpoint.
-   *
-   * A user is limited to 10 active sessions at a time by default. Learn more about session limits.
-   *
-   *
-   * @param {OAuthProvider} provider
-   * @param {string} success
-   * @param {string} failure
-   * @param {string[]} scopes
-   * @throws {AppwriteException}
-   * @returns {void|string}
+   * @param provider The OAuth2 provider to use.
+   * @param success The URL to redirect the user to after a successful login.
+   * @param failure The URL to redirect the user to after a failed login.
+   * @param scopes An array of scopes to request.
+   * @returns A new session.
    */
   async createOAuth2Token(
     provider: OAuthProvider,
@@ -911,126 +747,78 @@ export class Account {
     failure?: string,
     scopes?: string[],
   ): Promise<string | void> {
-    const url = this._account.createOAuth2Token(
-      provider,
-      success,
-      failure,
-      scopes,
-    );
-    return url;
+    return this._account.createOAuth2Token(provider, success, failure, scopes);
   }
 
   /**
-   * Create Phone token
+   * Create Phone Token
    *
-   * Sends the user an SMS with a secret key for creating a session.
-   * If the provided user ID has not be registered, a new user will be created.
-   * Use the returned user ID and secret and submit a request to the
-   * POST /v1/account/sessions/token endpoint to complete the login process.
-   * The secret sent to the user's phone is valid for 15 minutes.
+   * Use this endpoint to create a new phone token.
    *
-   * A user is limited to 10 active sessions at a time by default. Learn more about session limits.
-   *
-   * @param {string} userId
-   * @param {string} phone
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.Token>}
+   * @param userId The user's ID.
+   * @param phone The user's phone number.
+   * @returns A token object.
    */
-  async createPhoneToken(userId: string, phone: string): Promise<Models.Token> {
-    const session = await this._account.createPhoneToken(userId, phone);
-    this.triggerAuthCheck();
-    return session;
+  createPhoneToken(
+    userId: string,
+    phone: string,
+  ): Promise<Models.Token | null> {
+    return this._call(this._account.createPhoneToken(userId, phone));
   }
 
   /**
-   * Create Email Verification
+   * Create Verification
    *
-   * Use this endpoint to send a verification message to your user email address
-   * to confirm they are the valid owners of that address. Both the **userId**
-   * and **secret** arguments will be passed as query parameters to the URL you
-   * have provided to be attached to the verification email. The provided URL
-   * should redirect the user back to your app and allow you to complete the
-   * verification process by verifying both the **userId** and **secret**
-   * parameters. Learn more about how to [complete the verification
-   * process](/docs/client/account#accountUpdateEmailVerification). The
-   * verification link sent to the user's email address is valid for 7 days.
+   * Use this endpoint to send a verification email to the user.
    *
-   * Please note that in order to avoid a [Redirect
-   * Attack](https://github.com/OWASP/CheatSheetSeries/blob/master/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.md),
-   * the only valid redirect URLs are the ones from domains you have set when
-   * adding your platforms in the console interface.
-   *
-   *
-   * @param {string} url
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.Token>}
+   * @param url The URL to redirect the user to after the verification.
+   * @returns A token object.
    */
-  async createVerification(url: string): Promise<Models.Token> {
-    const result = await this._account.createVerification(url);
-    this.triggerAuthCheck();
-    return result;
+  createVerification(url: string): Promise<Models.Token | null> {
+    return this._call(this._account.createVerification(url));
   }
+
   /**
-   * Create Email Verification (confirmation)
+   * Update Verification
    *
-   * Use this endpoint to complete the user email verification process. Use both
-   * the **userId** and **secret** parameters that were attached to your app URL
-   * to verify the user email ownership. If confirmed this route will return a
-   * 200 status code.
+   * Use this endpoint to complete the email verification process.
    *
-   * @param {string} userId
-   * @param {string} secret
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.Token>}
+   * @param userId The user's ID.
+   * @param secret The secret from the verification email.
+   * @returns A token object.
    */
-  async updateVerification(
+  updateVerification(
     userId: string,
     secret: string,
-  ): Promise<Models.Token> {
-    const result = await this._account.updateVerification(userId, secret);
-    this.triggerAuthCheck();
-    return result;
+  ): Promise<Models.Token | null> {
+    return this._call(this._account.updateVerification(userId, secret));
   }
 
   /**
    * Create Phone Verification
    *
-   * Use this endpoint to send a verification SMS to the currently logged in
-   * user. This endpoint is meant for use after updating a user's phone number
-   * using the [accountUpdatePhone](/docs/client/account#accountUpdatePhone)
-   * endpoint. Learn more about how to [complete the verification
-   * process](/docs/client/account#accountUpdatePhoneVerification). The
-   * verification code sent to the user's phone number is valid for 15 minutes.
+   * Use this endpoint to send a verification SMS to the user.
    *
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.Token>}
+   * @returns A token object.
    */
-  async createPhoneVerification(): Promise<Models.Token> {
-    const result = await this._account.createPhoneVerification();
-    this.triggerAuthCheck();
-    return result;
+  createPhoneVerification(): Promise<Models.Token | null> {
+    return this._call(this._account.createPhoneVerification());
   }
 
   /**
-   * Create Phone Verification (confirmation)
+   * Update Phone Verification
    *
-   * Use this endpoint to complete the user phone verification process. Use the
-   * **userId** and **secret** that were sent to your user's phone number to
-   * verify the user email ownership. If confirmed this route will return a 200
-   * status code.
+   * Use this endpoint to complete the phone verification process.
    *
-   * @param {string} userId
-   * @param {string} secret
-   * @throws {AppwriteException}
-   * @returns {Promise<Models.Token>}
+   * @param userId The user's ID.
+   * @param secret The secret from the verification SMS.
+   * @returns A token object.
    */
-  async updatePhoneVerification(
+  updatePhoneVerification(
     userId: string,
     secret: string,
-  ): Promise<Models.Token> {
-    const result = await this._account.updatePhoneVerification(userId, secret);
-    this.triggerAuthCheck();
-    return result;
+  ): Promise<Models.Token | null> {
+    return this._call(this._account.updatePhoneVerification(userId, secret));
   }
 
   /* -------------------------------------------------------------------------- */
@@ -1051,8 +839,10 @@ export class Account {
    */
   async convertAnonymousAccountWithEmailAndPassword<
     T extends Models.Preferences,
-  >(email: string, password: string): Promise<Models.User<T>> {
-    const account = await this._account.updateEmail(email, password);
+  >(email: string, password: string): Promise<Models.User<T> | null> {
+    const account = await this._call(
+      this._account.updateEmail(email, password),
+    );
     this.triggerAuthCheck();
     return account as Models.User<T>;
   }
@@ -1060,13 +850,10 @@ export class Account {
   /**
    * Logout - Shortcut for  deletesession
    *
-   * @throws {AppwriteException}
-   * @returns {Promise<{}> }
+   * @returns An empty object.
    */
-
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-  async logout(): Promise<{}> {
-    return this.deleteSession('current');
+  async logout(): Promise<Record<string, never> | null> {
+    return (await this.deleteSession()) as Record<string, never> | null;
   }
 
   /**
@@ -1081,13 +868,29 @@ export class Account {
     this._triggerManualAuthCheck$.next(true);
   }
 
-  private async _checkIfAuthExists(): Promise<null | Models.User<Models.Preferences>> {
+  private async _call<T>(promise: Promise<T>): Promise<T | null> {
     try {
-      const account = await this._account.get();
-      return account;
-    } catch (error) {
-      console.warn(error);
+      return await promise;
+    } catch (e: unknown) {
+      if (e instanceof AppwriteException) {
+        console.error(e.message);
+      }
       return null;
     }
   }
 }
+
+/**
+ * An alias for the Account class.
+ */
+export const AccountService = Account;
+
+/**
+ * A provider for the Account class.
+ */
+export const provideAccount = (): Provider => {
+  return {
+    provide: Account,
+    useClass: Account,
+  };
+};

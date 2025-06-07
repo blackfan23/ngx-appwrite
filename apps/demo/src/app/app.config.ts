@@ -11,10 +11,6 @@ addRxPlugin(RxDBDevModePlugin);
 
 // test data for later
 export const TEST_COLLECTION = '65fc3a62a07dbc4f3dc8';
-export const TEST_DATA = {
-  name: 'John Doe',
-  age: 33,
-};
 
 export const appConfig: ApplicationConfig = {
   providers: [
