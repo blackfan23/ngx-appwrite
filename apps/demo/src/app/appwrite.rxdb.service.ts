@@ -1,17 +1,13 @@
 import { Injectable } from '@angular/core';
-import { AppwriteAdapterWithReplication } from 'ngx-appwrite';
-import { InferInput, number, object, string } from 'valibot';
-
-// schema for friends, merges base document
-const humansSchema = object({
-  id: string(),
-  name: string(),
-  age: number(),
-  homeAddress: string(),
-});
+import { AppwriteAdapterWithReplication } from 'ngx-appwrite/replication';
 
 // inferred type from schema
-export type Human = InferInput<typeof humansSchema>;
+export interface Human {
+  id: string;
+  name: string;
+  age: number;
+  homeAddress: string;
+}
 
 @Injectable({
   providedIn: 'root',

@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.7.4] - 2025-06-07
+
+- // Implement rxdb local storage
+  // changes to server to match 1.7.4
+- Remove search param from listExecutions method
+- Add token param to getFilePreview and getFileView for File tokens usage
+
 ## [1.7.0] - 2025-02-04
 
 - **BREAKING**: AppwriteAdapter class now takes a generic type. This simplifies the use of all methods inside, which don't need to be passed a generic type anymore. (See README.md for instructions)

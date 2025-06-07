@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { Injectable } from '@angular/core';
+import { CLIENT, ID } from 'ngx-appwrite';
 import {
   createRxDatabase,
   MangoQuerySelector,
@@ -11,7 +12,6 @@ import { replicateAppwrite } from 'rxdb/plugins/replication-appwrite';
 import { getRxStorageLocalstorage } from 'rxdb/plugins/storage-localstorage';
 import { wrappedValidateAjvStorage } from 'rxdb/plugins/validate-ajv';
 import { map, Observable } from 'rxjs';
-import { CLIENT, ID } from './setup';
 
 @Injectable()
 export abstract class AppwriteAdapterWithReplication<DocumentShape> {

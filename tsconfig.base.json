@@ -15,7 +15,10 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "ngx-appwrite": ["libs/ngx-appwrite/src/index.ts"]
+      "ngx-appwrite": ["libs/ngx-appwrite/src/index.ts"],
+      "ngx-appwrite/replication": [
+        "libs/ngx-appwrite/src/replication/public-api.ts"
+      ]
     }
   },
   "exclude": ["node_modules", "tmp"]

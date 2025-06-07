@@ -121,10 +121,20 @@ export class TeamsService {
     teamId: string,
     roles: string[],
     email?: string,
+    userId?: string,
+    phone?: string,
     url?: string,
-    name?: string | undefined,
+    name?: string,
   ): Promise<Models.Membership> {
-    return this._teams?.createMembership(teamId, roles, email, url, name);
+    return this._teams?.createMembership(
+      teamId,
+      roles,
+      email,
+      userId,
+      phone,
+      url,
+      name,
+    );
   }
   /**
    * List Team Memberships

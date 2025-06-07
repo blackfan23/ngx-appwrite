@@ -16,16 +16,14 @@ export class FunctionsService {
    *
    * @param {string} functionId
    * @param {string[]} queries
-   * @param {string} search
    * @throws {AppwriteException}
    * @returns {Promise}
    */
   listExecutions(
     functionId: string,
     queries?: string[],
-    search?: string,
   ): Promise<Models.ExecutionList> {
-    return this._functions.listExecutions(functionId, queries, search);
+    return this._functions.listExecutions(functionId, queries);
   }
   /**
    * Create Execution
