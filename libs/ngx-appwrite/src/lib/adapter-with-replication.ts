@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { Injectable } from '@angular/core';
-import { CLIENT, ID } from 'ngx-appwrite';
+import { ID } from 'appwrite';
 import {
   createRxDatabase,
   MangoQuerySelector,
@@ -19,6 +19,7 @@ import {
   Observable,
   switchMap,
 } from 'rxjs';
+import { CLIENT } from './setup';
 
 @Injectable()
 export abstract class AppwriteAdapterWithReplication<DocumentShape> {

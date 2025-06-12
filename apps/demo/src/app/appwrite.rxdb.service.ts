@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { AppwriteAdapterWithReplication } from 'ngx-appwrite/replication';
+import { AppwriteAdapterWithReplication } from 'ngx-appwrite';
 
 // inferred type from schema
 export interface Human {
