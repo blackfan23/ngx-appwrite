@@ -24,6 +24,7 @@ import {
 export abstract class AppwriteAdapterWithReplication<DocumentShape> {
   private _collection: RxCollection | undefined;
   private _isReady$ = new BehaviorSubject<boolean>(false);
+  private isReady$ = this._isReady$.asObservable().pipe(filter(Boolean));
 
   // * Create and return the replication state
   public async startReplication(rxdbReplication: {
@@ -122,8 +123,8 @@ export abstract class AppwriteAdapterWithReplication<DocumentShape> {
   public async document(
     idOrQuery: string | MangoQuerySelector<DocumentShape>,
   ): Promise<RxDocument<DocumentShape> | null> {
+    await firstValueFrom(this.isReady$);
     this._checkForCollection();
-
     const foundDocuments = await this._collection!.find({
       selector: {
         id:
@@ -144,7 +145,8 @@ export abstract class AppwriteAdapterWithReplication<DocumentShape> {
   public async documentList(
     queryObj?: MangoQuerySelector<DocumentShape> | undefined,
   ): Promise<RxDocument<DocumentShape>[]> {
-    await firstValueFrom(this._isReady$);
+    await firstValueFrom(this.isReady$);
+    this._checkForCollection();
     const foundDocuments = await this._collection!.find({
       selector: queryObj,
     }).exec();

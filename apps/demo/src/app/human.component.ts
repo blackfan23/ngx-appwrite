@@ -1,5 +1,5 @@
 import { AsyncPipe, CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import {
   FormBuilder,
   FormsModule,
@@ -137,7 +137,7 @@ import { Human, HumansRxdbService } from './appwrite.rxdb.service';
   `,
   styles: [],
 })
-export class HumanComponent {
+export class HumanComponent implements OnInit {
   private formBuilder = inject(FormBuilder);
   private humansService = inject(HumansRxdbService);
 
@@ -149,6 +149,11 @@ export class HumanComponent {
   });
 
   humans$: Observable<RxDocument<Human>[]> = this.humansService.documentList$();
+
+  async ngOnInit(): Promise<void> {
+    const humans = await this.humansService.documentList();
+    console.log(humans);
+  }
 
   saveHuman(): void {
     if (this.humanForm.valid) {
