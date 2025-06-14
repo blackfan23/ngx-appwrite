@@ -157,11 +157,12 @@ export class HumanComponent implements OnInit {
 
   saveHuman(): void {
     if (this.humanForm.valid) {
-      const humanData = this.humanForm.getRawValue();
+      const humanData: Human = this.humanForm.getRawValue() as Human;
       if (!humanData.id) {
-        delete (humanData as Partial<Human>).id;
+        this.humansService.create(humanData);
+      } else {
+        this.humansService.update(humanData);
       }
-      this.humansService.upsert(humanData as Human);
       this.resetForm();
     }
   }

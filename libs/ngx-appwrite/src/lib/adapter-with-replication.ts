@@ -7,6 +7,7 @@ import {
   RxCollection,
   RxDocument,
   RxJsonSchema,
+  StringKeys,
 } from 'rxdb';
 import { replicateAppwrite } from 'rxdb/plugins/replication-appwrite';
 import { getRxStorageLocalstorage } from 'rxdb/plugins/storage-localstorage';
@@ -23,9 +24,10 @@ import { CLIENT } from './setup';
 
 @Injectable()
 export abstract class AppwriteAdapterWithReplication<DocumentShape> {
-  private _collection: RxCollection | undefined;
+  private _collection: RxCollection<DocumentShape> | undefined;
   private _isReady$ = new BehaviorSubject<boolean>(false);
   private isReady$ = this._isReady$.asObservable().pipe(filter(Boolean));
+  private _primaryKey: StringKeys<DocumentShape> | undefined;
 
   // * Create and return the replication state
   public async startReplication(rxdbReplication: {
@@ -33,7 +35,12 @@ export abstract class AppwriteAdapterWithReplication<DocumentShape> {
     collectionId: string;
     rxdbSchema: RxJsonSchema<DocumentShape>;
   }) {
-    const db = await createRxDatabase({
+    this._primaryKey = rxdbReplication.rxdbSchema
+      .primaryKey as StringKeys<DocumentShape>;
+
+    const db = await createRxDatabase<
+      Record<string, RxCollection<DocumentShape>>
+    >({
       name: rxdbReplication.rxdbDatabasename,
       storage: wrappedValidateAjvStorage({
         storage: getRxStorageLocalstorage(),
@@ -73,45 +80,40 @@ export abstract class AppwriteAdapterWithReplication<DocumentShape> {
     return replicationState;
   }
 
-  public async create<PrimaryKey extends string = 'id'>(
-    data: Omit<DocumentShape, PrimaryKey>,
+  public async create(
+    data: Omit<DocumentShape, StringKeys<DocumentShape>>,
   ): Promise<RxDocument<DocumentShape>> {
     this._checkForCollection();
 
     const document: RxDocument<DocumentShape> = await this._collection!.insert({
-      id: ID.unique(),
+      [this._primaryKey as string]: ID.unique(),
       ...data,
-    });
+    } as unknown as DocumentShape);
     return document;
   }
 
-  public async update<PrimaryKey extends string = 'id'>(
-    document: DocumentShape | Omit<DocumentShape, PrimaryKey>,
-    newData: Partial<DocumentShape>,
+  public async update(
+    document: DocumentShape,
   ): Promise<RxDocument<DocumentShape>> {
     this._checkForCollection();
 
-    if (!(document as any)['id']) {
-      throw new Error('Can not update a document that has no id');
+    if (!this._primaryKey || !document[this._primaryKey]) {
+      throw new Error(
+        `Can not update a document that has no ${this._primaryKey}`,
+      );
     }
 
-    // merge data
-    const data = {
-      ...document,
-      ...newData,
-    };
-
-    return this.upsert(data);
+    return this.upsert(document as DocumentShape);
   }
 
-  public async upsert<PrimaryKey extends string = 'id'>(
-    data: DocumentShape | Omit<DocumentShape, PrimaryKey>,
+  public async upsert(
+    data: DocumentShape | Omit<DocumentShape, StringKeys<DocumentShape>>,
   ): Promise<RxDocument<DocumentShape>> {
     this._checkForCollection();
 
     // make sure the document has an id
-    if (!(data as any).id) {
-      (data as any).id = ID.unique();
+    if (!(data as any)[this._primaryKey]) {
+      (data as any)[this._primaryKey] = ID.unique();
     }
 
     const document: RxDocument<DocumentShape> = await this._collection!.upsert(
@@ -135,15 +137,19 @@ export abstract class AppwriteAdapterWithReplication<DocumentShape> {
   ): Promise<RxDocument<DocumentShape> | null> {
     await firstValueFrom(this.isReady$);
     this._checkForCollection();
+
+    let finalSelector: MangoQuerySelector<DocumentShape>;
+
+    if (typeof idOrQuery === 'string') {
+      finalSelector = {
+        [this._primaryKey as string]: { $eq: idOrQuery },
+      } as MangoQuerySelector<DocumentShape>;
+    } else {
+      finalSelector = idOrQuery;
+    }
+
     const foundDocuments = await this._collection!.find({
-      selector: {
-        id:
-          typeof idOrQuery === 'string'
-            ? {
-                $eq: idOrQuery,
-              }
-            : idOrQuery,
-      },
+      selector: finalSelector,
     }).exec();
     if (foundDocuments.length > 0) {
       return foundDocuments[0];
@@ -185,8 +191,16 @@ export abstract class AppwriteAdapterWithReplication<DocumentShape> {
     const documentList$ = this._isReady$.pipe(
       filter(Boolean),
       switchMap(() => {
+        let finalSelector: MangoQuerySelector<DocumentShape> | undefined;
+        if (typeof queryObj === 'string') {
+          finalSelector = {
+            [this._primaryKey as string]: queryObj,
+          } as MangoQuerySelector<DocumentShape>;
+        } else {
+          finalSelector = queryObj;
+        }
         return this._collection!.find({
-          selector: typeof queryObj === 'string' ? { id: queryObj } : queryObj,
+          selector: finalSelector,
         }).$;
       }),
     );
@@ -196,21 +210,18 @@ export abstract class AppwriteAdapterWithReplication<DocumentShape> {
 
   // return the raw data directly instead of RxDocument
   public raw = {
-    create: async (data: Omit<DocumentShape, 'id'>) => {
+    create: async (data: Omit<DocumentShape, StringKeys<DocumentShape>>) => {
       const document: RxDocument<DocumentShape> = await this.create(data);
       return document.toJSON();
     },
-    update: async (
-      document: RxDocument<DocumentShape>,
-      newData: Partial<DocumentShape>,
-    ) => {
-      const updatedDocument: RxDocument<DocumentShape> = await this.update(
-        document,
-        newData,
-      );
+    update: async (document: RxDocument<DocumentShape>) => {
+      const updatedDocument: RxDocument<DocumentShape> =
+        await this.update(document);
       return updatedDocument.toJSON();
     },
-    upsert: async (data: DocumentShape | Omit<DocumentShape, 'id'>) => {
+    upsert: async (
+      data: DocumentShape | Omit<DocumentShape, StringKeys<DocumentShape>>,
+    ) => {
       const document: RxDocument<DocumentShape> = await this.upsert(data);
       return document.toJSON();
     },
