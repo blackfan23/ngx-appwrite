@@ -85,14 +85,23 @@ export abstract class AppwriteAdapterWithReplication<DocumentShape> {
     return document;
   }
 
-  public async update(
-    document: RxDocument<DocumentShape>,
+  public async update<PrimaryKey extends string = 'id'>(
+    document: DocumentShape | Omit<DocumentShape, PrimaryKey>,
     newData: Partial<DocumentShape>,
   ): Promise<RxDocument<DocumentShape>> {
     this._checkForCollection();
 
-    const data: RxDocument<DocumentShape> = await document.patch(newData);
-    return data;
+    if (!(document as any)['id']) {
+      throw new Error('Can not update a document that has no id');
+    }
+
+    // merge data
+    const data = {
+      ...document,
+      ...newData,
+    };
+
+    return this.upsert(data);
   }
 
   public async upsert<PrimaryKey extends string = 'id'>(
