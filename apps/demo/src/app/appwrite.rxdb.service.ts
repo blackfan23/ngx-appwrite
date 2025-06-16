@@ -9,6 +9,13 @@ export interface Human {
   homeAddress: string;
 }
 
+export interface Alien {
+  id: string;
+  name: string;
+  planet: string;
+  species: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -39,6 +46,41 @@ export class HumansRxdbService extends AppwriteAdapterWithReplication<Human> {
           },
         },
         required: ['id', 'name', 'age', 'homeAddress'],
+      },
+    });
+  }
+}
+
+@Injectable({
+  providedIn: 'root',
+})
+export class AliensRxdbService extends AppwriteAdapterWithReplication<Alien> {
+  constructor() {
+    super();
+    this.startReplication({
+      rxdbDatabasename: 'mydb',
+      collectionId: 'aliens',
+      rxdbSchema: {
+        title: 'aliens',
+        version: 0,
+        primaryKey: 'id',
+        type: 'object',
+        properties: {
+          id: {
+            type: 'string',
+            maxLength: 100,
+          },
+          name: {
+            type: 'string',
+          },
+          planet: {
+            type: 'string',
+          },
+          species: {
+            type: 'string',
+          },
+        },
+        required: ['id', 'name', 'planet', 'species'],
       },
     });
   }

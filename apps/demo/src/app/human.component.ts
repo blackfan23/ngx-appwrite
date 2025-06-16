@@ -8,7 +8,11 @@ import {
 } from '@angular/forms';
 import { RxDocument } from 'rxdb';
 import { Observable } from 'rxjs';
-import { Human, HumansRxdbService } from './appwrite.rxdb.service';
+import {
+  AliensRxdbService,
+  Human,
+  HumansRxdbService,
+} from './appwrite.rxdb.service';
 
 @Component({
   selector: 'app-human',
@@ -140,6 +144,7 @@ import { Human, HumansRxdbService } from './appwrite.rxdb.service';
 export class HumanComponent implements OnInit {
   private formBuilder = inject(FormBuilder);
   private humansService = inject(HumansRxdbService);
+  private aliensService = inject(AliensRxdbService);
 
   humanForm = this.formBuilder.group({
     id: [''],
@@ -153,6 +158,8 @@ export class HumanComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     const humans = await this.humansService.documentList();
     console.log(humans);
+    const aliens = await this.aliensService.documentList();
+    console.log(aliens);
   }
 
   saveHuman(): void {
