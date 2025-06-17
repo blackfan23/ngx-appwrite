@@ -2,16 +2,14 @@
 import { Injectable } from '@angular/core';
 import { ID } from 'appwrite';
 import {
-  createRxDatabase,
   MangoQuerySelector,
   RxCollection,
+  RxDatabase,
   RxDocument,
   RxJsonSchema,
   StringKeys,
 } from 'rxdb';
 import { replicateAppwrite } from 'rxdb/plugins/replication-appwrite';
-import { getRxStorageLocalstorage } from 'rxdb/plugins/storage-localstorage';
-import { wrappedValidateAjvStorage } from 'rxdb/plugins/validate-ajv';
 import {
   BehaviorSubject,
   filter,
@@ -22,7 +20,9 @@ import {
 } from 'rxjs';
 import { CLIENT } from './setup';
 
-@Injectable()
+@Injectable({
+  providedIn: 'root',
+})
 export abstract class AppwriteAdapterWithReplication<DocumentShape> {
   private _collection: RxCollection<DocumentShape> | undefined;
   private _isReady$ = new BehaviorSubject<boolean>(false);
@@ -30,29 +30,16 @@ export abstract class AppwriteAdapterWithReplication<DocumentShape> {
   private _primaryKey: StringKeys<DocumentShape> | undefined;
 
   // * Create and return the replication state
-  public async startReplication(rxdbReplication: {
+  public async replicate(rxdbReplication: {
     rxdbDatabasename: string;
     collectionId: string;
     rxdbSchema: RxJsonSchema<DocumentShape>;
+    db: RxDatabase<Record<string, RxCollection<DocumentShape>>>;
   }) {
     this._primaryKey = rxdbReplication.rxdbSchema
       .primaryKey as StringKeys<DocumentShape>;
 
-    const db = await createRxDatabase<
-      Record<string, RxCollection<DocumentShape>>
-    >({
-      name: rxdbReplication.rxdbDatabasename,
-      storage: wrappedValidateAjvStorage({
-        storage: getRxStorageLocalstorage(),
-      }),
-      multiInstance: true,
-    });
-
-    await db.addCollections({
-      [rxdbReplication.collectionId]: {
-        schema: rxdbReplication.rxdbSchema,
-      },
-    });
+    const db = rxdbReplication.db;
 
     this._collection = db[rxdbReplication.collectionId];
 
@@ -78,7 +65,7 @@ export abstract class AppwriteAdapterWithReplication<DocumentShape> {
        */
     });
     this._isReady$.next(true);
-    return { replicationState, db };
+    return { replicationState, collection: this._collection };
   }
 
   public async create(
@@ -87,8 +74,8 @@ export abstract class AppwriteAdapterWithReplication<DocumentShape> {
     this._checkForCollection();
 
     const document: RxDocument<DocumentShape> = await this._collection!.insert({
-      [this._primaryKey as string]: ID.unique(),
       ...data,
+      [this._primaryKey as string]: ID.unique(),
     } as unknown as DocumentShape);
     return document;
   }

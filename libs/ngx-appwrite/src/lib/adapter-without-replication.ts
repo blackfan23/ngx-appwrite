@@ -3,7 +3,9 @@ import { ID, Models } from 'appwrite';
 import { Observable, map } from 'rxjs';
 import { Databases } from './databases';
 
-@Injectable()
+@Injectable({
+  providedIn: 'root',
+})
 export abstract class AppwriteAdapter<DocumentShape extends Models.Document> {
   private databases = inject(Databases);
   protected abstract collectionId: string;
