@@ -11,7 +11,11 @@ export class ReplicationManager<DocumentShape> {
   private _databases: RxDatabase<
     Record<string, RxCollection<DocumentShape>>
   >[] = [];
-  private _queuePromise: Promise<any> | null = null;
+  private _queuePromise: Promise<{
+    replicationState: RxReplicationState<DocumentShape, DocumentShape>;
+    db: RxDatabase<Record<string, RxCollection<DocumentShape>>>;
+    collection: RxCollection<DocumentShape>;
+  }> | null = null;
 
   private async _getOrCreateDatabase(
     rxdbDatabasename: string,
@@ -41,7 +45,7 @@ export class ReplicationManager<DocumentShape> {
       collectionId: string;
       rxdbSchema: RxJsonSchema<DocumentShape>;
     }) => Promise<{
-      replicationState: RxReplicationState<DocumentShape, any>;
+      replicationState: RxReplicationState<DocumentShape, DocumentShape>;
       collection: RxCollection<DocumentShape>;
     }>;
   }) {

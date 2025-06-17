@@ -3,6 +3,7 @@ import {
   AppwriteAdapterWithReplication,
   ReplicationManager,
 } from 'ngx-appwrite';
+import { RxError, RxTypeError } from 'rxdb';
 
 // inferred type from schema
 export interface Human {
@@ -54,8 +55,8 @@ export class HumansRxdbService extends AppwriteAdapterWithReplication<Human> {
   }
 
   async initializeReplication() {
-    const { replicationState, db, collection } =
-      await this.replicationManager.startReplication({
+    const { replicationState } = await this.replicationManager.startReplication(
+      {
         rxdbDatabasename: 'mydb',
         collectionId: 'humans',
         rxdbSchema: this.humansSchema,
@@ -63,11 +64,14 @@ export class HumansRxdbService extends AppwriteAdapterWithReplication<Human> {
           // Call the adapter's startReplication with the database instance
           return await super.replicate(options);
         },
-      });
+      },
+    );
 
     // You can now use replicationState, db, and collection
     // For example, to react to replication changes:
-    replicationState.error$.subscribe((err: any) => console.error(err));
+    replicationState.error$.subscribe((err: RxError | RxTypeError) =>
+      console.error(err),
+    );
   }
 }
 
@@ -106,13 +110,21 @@ export class AliensRxdbService extends AppwriteAdapterWithReplication<Alien> {
   }
 
   async initializeReplication() {
-    await this.replicationManager.startReplication({
-      rxdbDatabasename: 'mydb',
-      collectionId: 'aliens',
-      rxdbSchema: this.aliensSchema,
-      adapterReplicationFunction: async (options) => {
-        return await super.replicate(options);
+    const { replicationState } = await this.replicationManager.startReplication(
+      {
+        rxdbDatabasename: 'mydb',
+        collectionId: 'aliens',
+        rxdbSchema: this.aliensSchema,
+        adapterReplicationFunction: async (options) => {
+          return await super.replicate(options);
+        },
       },
-    });
+    );
+
+    // You can now use replicationState, db, and collection
+    // For example, to react to replication changes:
+    replicationState.error$.subscribe((err: RxError | RxTypeError) =>
+      console.error(err),
+    );
   }
 }
