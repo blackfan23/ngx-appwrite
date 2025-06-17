@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { createRxDatabase, RxCollection, RxDatabase, RxJsonSchema } from 'rxdb';
+import { RxReplicationState } from 'rxdb/plugins/replication';
 import { getRxStorageLocalstorage } from 'rxdb/plugins/storage-localstorage';
 import { wrappedValidateAjvStorage } from 'rxdb/plugins/validate-ajv';
 
@@ -34,13 +35,15 @@ export class ReplicationManager<DocumentShape> {
     rxdbDatabasename: string;
     collectionId: string;
     rxdbSchema: RxJsonSchema<DocumentShape>;
-
     adapterReplicationFunction: (options: {
       db: RxDatabase<Record<string, RxCollection<DocumentShape>>>;
       rxdbDatabasename: string;
       collectionId: string;
       rxdbSchema: RxJsonSchema<DocumentShape>;
-    }) => Promise<any>;
+    }) => Promise<{
+      replicationState: RxReplicationState<DocumentShape, any>;
+      collection: RxCollection<DocumentShape>;
+    }>;
   }) {
     const runReplication = async () => {
       const db = await this._getOrCreateDatabase(
