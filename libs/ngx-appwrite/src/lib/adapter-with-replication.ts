@@ -45,6 +45,7 @@ export abstract class AppwriteAdapterWithReplication<DocumentShape> {
       storage: wrappedValidateAjvStorage({
         storage: getRxStorageLocalstorage(),
       }),
+      multiInstance: true,
     });
 
     await db.addCollections({
@@ -77,7 +78,7 @@ export abstract class AppwriteAdapterWithReplication<DocumentShape> {
        */
     });
     this._isReady$.next(true);
-    return replicationState;
+    return { replicationState, db };
   }
 
   public async create(

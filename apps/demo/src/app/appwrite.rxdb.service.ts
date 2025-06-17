@@ -16,6 +16,8 @@ export interface Alien {
   species: string;
 }
 
+const dbs = {};
+
 @Injectable({
   providedIn: 'root',
 })
