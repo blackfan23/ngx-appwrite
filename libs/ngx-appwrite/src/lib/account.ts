@@ -86,10 +86,8 @@ export class Account {
    * @template TPrefs The type of the user's preferences.
    * @returns The user's data.
    */
-  get<
-    TPrefs extends Models.Preferences,
-  >(): Promise<Models.User<TPrefs> | null> {
-    return this._call(this._account.get<TPrefs>());
+  get<TPrefs extends Models.Preferences>(): Promise<Models.User<TPrefs>> {
+    return this._account.get<TPrefs>();
   }
 
   /**
@@ -113,10 +111,8 @@ export class Account {
     defaultPrefs: T = {} as T,
     name?: string,
     userId: string = ID.unique(),
-  ): Promise<Models.User<T> | null> {
-    const account = await this._call(
-      this._account.create(userId, email, password, name),
-    );
+  ): Promise<Models.User<T>> {
+    const account = await this._account.create(userId, email, password, name);
     if (account) {
       this.triggerAuthCheck();
       await this.updatePrefs(defaultPrefs);
@@ -144,8 +140,8 @@ export class Account {
   updateEmail<TPrefs extends Models.Preferences>(
     email: string,
     password: string,
-  ): Promise<Models.User<TPrefs> | null> {
-    return this._call(this._account.updateEmail(email, password));
+  ): Promise<Models.User<TPrefs>> {
+    return this._account.updateEmail(email, password);
   }
 
   /**
@@ -157,8 +153,8 @@ export class Account {
    * @param queries An array of queries to filter the results.
    * @returns The list of identities.
    */
-  listIdentities(queries: string[] = []): Promise<Models.IdentityList | null> {
-    return this._call(this._account.listIdentities(queries));
+  listIdentities(queries: string[] = []): Promise<Models.IdentityList> {
+    return this._account.listIdentities(queries);
   }
 
   /**
@@ -169,8 +165,8 @@ export class Account {
    * @param id The ID of the identity to delete.
    * @returns An empty object.
    */
-  async deleteIdentity(id: string): Promise<Record<string, never> | null> {
-    const result = await this._call(this._account.deleteIdentity(id));
+  async deleteIdentity(id: string): Promise<Record<string, never>> {
+    const result = await this._account.deleteIdentity(id);
 
     return result === undefined ? {} : result;
   }
@@ -186,8 +182,8 @@ export class Account {
    *
    * @returns A JSON Web Token.
    */
-  createJWT(): Promise<Models.Jwt | null> {
-    return this._call(this._account.createJWT());
+  createJWT(): Promise<Models.Jwt> {
+    return this._account.createJWT();
   }
 
   /**
@@ -199,8 +195,8 @@ export class Account {
    * @param queries An array of queries to filter the results.
    * @returns A list of security logs.
    */
-  listLogs(queries: string[] = []): Promise<Models.LogList | null> {
-    return this._call(this._account.listLogs(queries));
+  listLogs(queries: string[] = []): Promise<Models.LogList> {
+    return this._account.listLogs(queries);
   }
 
   /**
@@ -213,8 +209,8 @@ export class Account {
    */
   updateMFA<TPrefs extends Models.Preferences>(
     enableMFA: boolean,
-  ): Promise<Models.User<TPrefs> | null> {
-    return this._call(this._account.updateMFA(enableMFA));
+  ): Promise<Models.User<TPrefs>> {
+    return this._account.updateMFA(enableMFA);
   }
 
   /**
@@ -225,10 +221,8 @@ export class Account {
    *
    * @returns The MFA type.
    */
-  createMfaAuthenticator(): Promise<Models.MfaType | null> {
-    return this._call(
-      this._account.createMfaAuthenticator(AuthenticatorType.Totp),
-    );
+  createMfaAuthenticator(): Promise<Models.MfaType> {
+    return this._account.createMfaAuthenticator(AuthenticatorType.Totp);
   }
 
   /**
@@ -241,10 +235,8 @@ export class Account {
    */
   updateMfaAuthenticator<TPrefs extends Models.Preferences>(
     otp: string,
-  ): Promise<Models.User<TPrefs> | null> {
-    return this._call(
-      this._account.updateMfaAuthenticator(AuthenticatorType.Totp, otp),
-    );
+  ): Promise<Models.User<TPrefs>> {
+    return this._account.updateMfaAuthenticator(AuthenticatorType.Totp, otp);
   }
 
   /**
@@ -254,12 +246,8 @@ export class Account {
    *
    * @returns An empty object.
    */
-  async deleteMfaAuthenticator(): Promise<Record<string, never> | null> {
-    const result = await this._call(
-      this._account.deleteMfaAuthenticator(AuthenticatorType.Totp),
-    );
-
-    return result === undefined ? {} : result;
+  async deleteMfaAuthenticator(): Promise<void> {
+    await this._account.deleteMfaAuthenticator(AuthenticatorType.Totp);
   }
 
   /**
@@ -272,8 +260,8 @@ export class Account {
    */
   createMfaChallenge(
     factor: AuthenticationFactor,
-  ): Promise<Models.MfaChallenge | null> {
-    return this._call(this._account.createMfaChallenge(factor));
+  ): Promise<Models.MfaChallenge> {
+    return this._account.createMfaChallenge(factor);
   }
 
   /**
@@ -288,12 +276,8 @@ export class Account {
   async updateMfaChallenge(
     challengeId: string,
     otp: string,
-  ): Promise<Models.Session | null> {
-    const result = await this._call(
-      this._account.updateMfaChallenge(challengeId, otp),
-    );
-
-    return result === undefined ? null : result;
+  ): Promise<Models.Session> {
+    return this._account.updateMfaChallenge(challengeId, otp);
   }
 
   /**
@@ -303,8 +287,8 @@ export class Account {
    *
    * @returns A list of MFA factors.
    */
-  listMfaFactors(): Promise<Models.MfaFactors | null> {
-    return this._call(this._account.listMfaFactors());
+  listMfaFactors(): Promise<Models.MfaFactors> {
+    return this._account.listMfaFactors();
   }
 
   /**
@@ -314,8 +298,8 @@ export class Account {
    *
    * @returns A list of MFA recovery codes.
    */
-  getMfaRecoveryCodes(): Promise<Models.MfaRecoveryCodes | null> {
-    return this._call(this._account.getMfaRecoveryCodes());
+  getMfaRecoveryCodes(): Promise<Models.MfaRecoveryCodes> {
+    return this._account.getMfaRecoveryCodes();
   }
 
   /**
@@ -325,8 +309,8 @@ export class Account {
    *
    * @returns A list of MFA recovery codes.
    */
-  createMfaRecoveryCodes(): Promise<Models.MfaRecoveryCodes | null> {
-    return this._call(this._account.createMfaRecoveryCodes());
+  createMfaRecoveryCodes(): Promise<Models.MfaRecoveryCodes> {
+    return this._account.createMfaRecoveryCodes();
   }
 
   /**
@@ -336,8 +320,8 @@ export class Account {
    *
    * @returns A list of MFA recovery codes.
    */
-  updateMfaRecoveryCodes(): Promise<Models.MfaRecoveryCodes | null> {
-    return this._call(this._account.updateMfaRecoveryCodes());
+  updateMfaRecoveryCodes(): Promise<Models.MfaRecoveryCodes> {
+    return this._account.updateMfaRecoveryCodes();
   }
 
   /**
@@ -350,8 +334,8 @@ export class Account {
    */
   updateName<TPrefs extends Models.Preferences>(
     name: string,
-  ): Promise<Models.User<TPrefs> | null> {
-    return this._call(this._account.updateName(name));
+  ): Promise<Models.User<TPrefs>> {
+    return this._account.updateName(name);
   }
 
   /**
@@ -367,8 +351,8 @@ export class Account {
   updatePassword<TPrefs extends Models.Preferences>(
     password: string,
     oldPassword?: string,
-  ): Promise<Models.User<TPrefs> | null> {
-    return this._call(this._account.updatePassword(password, oldPassword));
+  ): Promise<Models.User<TPrefs>> {
+    return this._account.updatePassword(password, oldPassword);
   }
 
   /**
@@ -383,8 +367,8 @@ export class Account {
   updatePhone<TPrefs extends Models.Preferences>(
     phoneNumber: string,
     password: string,
-  ): Promise<Models.User<TPrefs> | null> {
-    return this._call(this._account.updatePhone(phoneNumber, password));
+  ): Promise<Models.User<TPrefs>> {
+    return this._account.updatePhone(phoneNumber, password);
   }
 
   /**
@@ -394,8 +378,8 @@ export class Account {
    *
    * @returns The user's preferences.
    */
-  getPrefs<TPrefs extends Models.Preferences>(): Promise<TPrefs | null> {
-    return this._call(this._account.getPrefs<TPrefs>());
+  getPrefs<TPrefs extends Models.Preferences>(): Promise<TPrefs> {
+    return this._account.getPrefs<TPrefs>();
   }
 
   /**
@@ -409,8 +393,8 @@ export class Account {
    */
   updatePrefs<TPrefs extends Models.Preferences>(
     prefs: TPrefs,
-  ): Promise<Models.User<TPrefs> | null> {
-    return this._call(this._account.updatePrefs<TPrefs>(prefs));
+  ): Promise<Models.User<TPrefs>> {
+    return this._account.updatePrefs<TPrefs>(prefs);
   }
 
   /**
@@ -422,8 +406,8 @@ export class Account {
    * @param url The URL to redirect the user to after the password reset.
    * @returns A token object.
    */
-  createRecovery(email: string, url: string): Promise<Models.Token | null> {
-    return this._call(this._account.createRecovery(email, url));
+  createRecovery(email: string, url: string): Promise<Models.Token> {
+    return this._account.createRecovery(email, url);
   }
 
   /**
@@ -440,8 +424,8 @@ export class Account {
     userId: string,
     secret: string,
     password: string,
-  ): Promise<Models.Token | null> {
-    return this._call(this._account.updateRecovery(userId, secret, password));
+  ): Promise<Models.Token> {
+    return this._account.updateRecovery(userId, secret, password);
   }
 
   /**
@@ -451,8 +435,8 @@ export class Account {
    *
    * @returns A list of sessions.
    */
-  listSessions(): Promise<Models.SessionList | null> {
-    return this._call(this._account.listSessions());
+  listSessions(): Promise<Models.SessionList> {
+    return this._account.listSessions();
   }
 
   /**
@@ -462,8 +446,8 @@ export class Account {
    *
    * @returns An empty object.
    */
-  async deleteSessions(): Promise<Record<string, never> | null> {
-    const deleted = await this._call(this._account.deleteSessions());
+  async deleteSessions(): Promise<Record<string, never>> {
+    const deleted = await this._account.deleteSessions();
     this.triggerAuthCheck();
 
     return deleted === undefined ? {} : deleted;
@@ -480,8 +464,8 @@ export class Account {
    *
    * @returns A session object.
    */
-  async createAnonymousSession(): Promise<Models.Session | null> {
-    const session = await this._call(this._account.createAnonymousSession());
+  async createAnonymousSession(): Promise<Models.Session> {
+    const session = await this._account.createAnonymousSession();
     this.triggerAuthCheck();
     return session;
   }
@@ -498,9 +482,10 @@ export class Account {
   async createEmailPasswordSession(
     email: string,
     password: string,
-  ): Promise<Models.Session | null> {
-    const session = await this._call(
-      this._account.createEmailPasswordSession(email, password),
+  ): Promise<Models.Session> {
+    const session = await this._account.createEmailPasswordSession(
+      email,
+      password,
     );
     this.triggerAuthCheck();
     return session;
@@ -518,10 +503,8 @@ export class Account {
   async updateMagicURLSession(
     userId: string,
     secret: string,
-  ): Promise<Models.Session | null> {
-    const session = await this._call(
-      this._account.updateMagicURLSession(userId, secret),
-    );
+  ): Promise<Models.Session> {
+    const session = await this._account.updateMagicURLSession(userId, secret);
     this.triggerAuthCheck();
     return session;
   }
@@ -544,8 +527,14 @@ export class Account {
     failure?: string,
     scopes?: string[],
   ): Promise<string | void> {
-    this._account.createOAuth2Session(provider, success, failure, scopes);
+    const res = this._account.createOAuth2Session(
+      provider,
+      success,
+      failure,
+      scopes,
+    );
     this.triggerAuthCheck();
+    return res;
   }
 
   /**
@@ -560,10 +549,8 @@ export class Account {
   async updatePhoneSession(
     userId: string,
     secret: string,
-  ): Promise<Models.Session | null> {
-    const session = await this._call(
-      this._account.updatePhoneSession(userId, secret),
-    );
+  ): Promise<Models.Session> {
+    const session = await this._account.updatePhoneSession(userId, secret);
     this.triggerAuthCheck();
     return session;
   }
@@ -577,11 +564,8 @@ export class Account {
    * @param secret The secret from the token.
    * @returns A session object.
    */
-  createSession(
-    userId: string,
-    secret: string,
-  ): Promise<Models.Session | null> {
-    return this._call(this._account.createSession(userId, secret));
+  createSession(userId: string, secret: string): Promise<Models.Session> {
+    return this._account.createSession(userId, secret);
   }
 
   /**
@@ -592,8 +576,8 @@ export class Account {
    * @param sessionId The ID of the session to get.
    * @returns A session object.
    */
-  getSession(sessionId = 'current'): Promise<Models.Session | null> {
-    return this._call(this._account.getSession(sessionId));
+  getSession(sessionId = 'current'): Promise<Models.Session> {
+    return this._account.getSession(sessionId);
   }
 
   /**
@@ -604,8 +588,8 @@ export class Account {
    * @param sessionId The ID of the session to update.
    * @returns A session object.
    */
-  updateSession(sessionId = 'current'): Promise<Models.Session | null> {
-    return this._call(this._account.updateSession(sessionId));
+  updateSession(sessionId = 'current'): Promise<Models.Session> {
+    return this._account.updateSession(sessionId);
   }
 
   /**
@@ -616,10 +600,8 @@ export class Account {
    * @param sessionId The ID of the session to delete.
    * @returns An empty object.
    */
-  async deleteSession(
-    sessionId = 'current',
-  ): Promise<Record<string, never> | null> {
-    const deleted = await this._call(this._account.deleteSession(sessionId));
+  async deleteSession(sessionId = 'current'): Promise<Record<string, never>> {
+    const deleted = await this._account.deleteSession(sessionId);
     this.triggerAuthCheck();
 
     return deleted === undefined ? {} : deleted;
@@ -632,10 +614,10 @@ export class Account {
    *
    * @returns The updated user.
    */
-  updateStatus<
-    TPrefs extends Models.Preferences,
-  >(): Promise<Models.User<TPrefs> | null> {
-    return this._call(this._account.updateStatus());
+  updateStatus<TPrefs extends Models.Preferences>(): Promise<
+    Models.User<TPrefs>
+  > {
+    return this._account.updateStatus();
   }
 
   /**
@@ -652,10 +634,8 @@ export class Account {
     targetId: string,
     identifier: string,
     providerId?: string,
-  ): Promise<Models.Target | null> {
-    return this._call(
-      this._account.createPushTarget(targetId, identifier, providerId),
-    );
+  ): Promise<Models.Target> {
+    return this._account.createPushTarget(targetId, identifier, providerId);
   }
 
   /**
@@ -670,8 +650,8 @@ export class Account {
   updatePushTarget(
     targetId: string,
     identifier: string,
-  ): Promise<Models.Target | null> {
-    return this._call(this._account.updatePushTarget(targetId, identifier));
+  ): Promise<Models.Target> {
+    return this._account.updatePushTarget(targetId, identifier);
   }
 
   /**
@@ -682,10 +662,8 @@ export class Account {
    * @param targetId The ID of the push target.
    * @returns An empty object.
    */
-  async deletePushTarget(
-    targetId: string,
-  ): Promise<Record<string, never> | null> {
-    const result = await this._call(this._account.deletePushTarget(targetId));
+  async deletePushTarget(targetId: string): Promise<Record<string, never>> {
+    const result = await this._account.deletePushTarget(targetId);
 
     return result === undefined ? {} : result;
   }
@@ -704,8 +682,8 @@ export class Account {
     userId: string,
     email: string,
     phrase = false,
-  ): Promise<Models.Token | null> {
-    return this._call(this._account.createEmailToken(userId, email, phrase));
+  ): Promise<Models.Token> {
+    return this._account.createEmailToken(userId, email, phrase);
   }
 
   /**
@@ -724,10 +702,8 @@ export class Account {
     email: string,
     url?: string,
     phrase = true,
-  ): Promise<Models.Token | null> {
-    return this._call(
-      this._account.createMagicURLToken(userId, email, url, phrase),
-    );
+  ): Promise<Models.Token> {
+    return this._account.createMagicURLToken(userId, email, url, phrase);
   }
 
   /**
@@ -759,11 +735,8 @@ export class Account {
    * @param phone The user's phone number.
    * @returns A token object.
    */
-  createPhoneToken(
-    userId: string,
-    phone: string,
-  ): Promise<Models.Token | null> {
-    return this._call(this._account.createPhoneToken(userId, phone));
+  createPhoneToken(userId: string, phone: string): Promise<Models.Token> {
+    return this._account.createPhoneToken(userId, phone);
   }
 
   /**
@@ -774,8 +747,8 @@ export class Account {
    * @param url The URL to redirect the user to after the verification.
    * @returns A token object.
    */
-  createVerification(url: string): Promise<Models.Token | null> {
-    return this._call(this._account.createVerification(url));
+  createVerification(url: string): Promise<Models.Token> {
+    return this._account.createVerification(url);
   }
 
   /**
@@ -787,11 +760,8 @@ export class Account {
    * @param secret The secret from the verification email.
    * @returns A token object.
    */
-  updateVerification(
-    userId: string,
-    secret: string,
-  ): Promise<Models.Token | null> {
-    return this._call(this._account.updateVerification(userId, secret));
+  updateVerification(userId: string, secret: string): Promise<Models.Token> {
+    return this._account.updateVerification(userId, secret);
   }
 
   /**
@@ -801,8 +771,8 @@ export class Account {
    *
    * @returns A token object.
    */
-  createPhoneVerification(): Promise<Models.Token | null> {
-    return this._call(this._account.createPhoneVerification());
+  createPhoneVerification(): Promise<Models.Token> {
+    return this._account.createPhoneVerification();
   }
 
   /**
@@ -817,8 +787,8 @@ export class Account {
   updatePhoneVerification(
     userId: string,
     secret: string,
-  ): Promise<Models.Token | null> {
-    return this._call(this._account.updatePhoneVerification(userId, secret));
+  ): Promise<Models.Token> {
+    return this._account.updatePhoneVerification(userId, secret);
   }
 
   /* -------------------------------------------------------------------------- */
@@ -839,10 +809,8 @@ export class Account {
    */
   async convertAnonymousAccountWithEmailAndPassword<
     T extends Models.Preferences,
-  >(email: string, password: string): Promise<Models.User<T> | null> {
-    const account = await this._call(
-      this._account.updateEmail(email, password),
-    );
+  >(email: string, password: string): Promise<Models.User<T>> {
+    const account = await this._account.updateEmail(email, password);
     this.triggerAuthCheck();
     return account as Models.User<T>;
   }
@@ -852,8 +820,8 @@ export class Account {
    *
    * @returns An empty object.
    */
-  async logout(): Promise<Record<string, never> | null> {
-    return (await this.deleteSession()) as Record<string, never> | null;
+  async logout(): Promise<Record<string, never>> {
+    return this.deleteSession();
   }
 
   /**
@@ -866,17 +834,6 @@ export class Account {
    */
   triggerAuthCheck(): void {
     this._triggerManualAuthCheck$.next(true);
-  }
-
-  private async _call<T>(promise: Promise<T>): Promise<T | null> {
-    try {
-      return await promise;
-    } catch (e: unknown) {
-      if (e instanceof AppwriteException) {
-        console.error(e.message);
-      }
-      return null;
-    }
   }
 }
 
