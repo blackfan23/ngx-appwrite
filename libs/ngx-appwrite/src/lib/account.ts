@@ -720,9 +720,9 @@ export class Account {
    * @returns A token object.
    */
   createMagicURLToken(
+    userId: string = ID.unique(),
     email: string,
     url?: string,
-    userId: string = ID.unique(),
     phrase = true,
   ): Promise<Models.Token | null> {
     return this._call(
