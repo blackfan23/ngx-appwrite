@@ -90,9 +90,10 @@ export class Account {
     TPrefs extends Models.Preferences,
   >(): Promise<Models.User<TPrefs> | null> {
     try {
-      return this._account.get<TPrefs>();
+      const account = await this._account.get<TPrefs>();
+      return account;
     } catch (error) {
-      console.error(error);
+      console.error('ngx-appwrite: account > get:', error);
       return null;
     }
   }

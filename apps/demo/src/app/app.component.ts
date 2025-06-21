@@ -16,6 +16,7 @@ export class AppComponent implements OnInit {
   // login to appwrite
   async ngOnInit() {
     let account = await this.account.get<{ hello: string }>();
+    console.log('🚀 ~ AppComponent ~ ngOnInit ~ account:', account);
     if (!account) {
       // login if account can't be retrieved
       await this.account.createEmailPasswordSession(
