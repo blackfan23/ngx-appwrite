@@ -86,8 +86,15 @@ export class Account {
    * @template TPrefs The type of the user's preferences.
    * @returns The user's data.
    */
-  get<TPrefs extends Models.Preferences>(): Promise<Models.User<TPrefs>> {
-    return this._account.get<TPrefs>();
+  async get<
+    TPrefs extends Models.Preferences,
+  >(): Promise<Models.User<TPrefs> | null> {
+    try {
+      return this._account.get<TPrefs>();
+    } catch (error) {
+      console.error(error);
+      return null;
+    }
   }
 
   /**
