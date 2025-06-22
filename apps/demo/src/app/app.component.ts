@@ -15,15 +15,16 @@ export class AppComponent implements OnInit {
 
   // login to appwrite
   async ngOnInit() {
-    let account = await this.account.get<{ hello: string }>();
-    console.log('🚀 ~ AppComponent ~ ngOnInit ~ account:', account);
-    if (!account) {
-      // login if account can't be retrieved
+    try {
+      const account = await this.account.get<{ hello: string }>();
+      console.log('🚀 ~ AppComponent ~ ngOnInit ~ account:', account);
+    } catch (error) {
+      console.error('ngx-appwrite: account > ngOnInit:', error);
       await this.account.createEmailPasswordSession(
         SECRETS.EMAIL,
         SECRETS.PASSWORD,
       );
-      account = await this.account.get<{ hello: string }>();
+      const account = await this.account.get<{ hello: string }>();
     }
   }
 }

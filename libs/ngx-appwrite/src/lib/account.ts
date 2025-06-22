@@ -12,6 +12,8 @@ import {
   Observable,
   Subject,
   catchError,
+  debounceTime,
+  distinctUntilChanged,
   from,
   merge,
   of,
@@ -63,7 +65,9 @@ export class Account {
         this._watchAuthChannel$,
         this._triggerManualAuthCheck$,
       ).pipe(
+        debounceTime(100),
         switchMap(() => from(this.get<TPrefs>())),
+        distinctUntilChanged((prev, curr) => prev.$id === curr.$id),
         catchError((error) => of(null)),
         shareReplay(1),
       );
@@ -281,7 +285,9 @@ export class Account {
     challengeId: string,
     otp: string,
   ): Promise<Models.Session> {
-    return this._account.updateMfaChallenge(challengeId, otp);
+    const session = this._account.updateMfaChallenge(challengeId, otp);
+    this.triggerAuthCheck();
+    return session;
   }
 
   /**
@@ -569,7 +575,9 @@ export class Account {
    * @returns A session object.
    */
   createSession(userId: string, secret: string): Promise<Models.Session> {
-    return this._account.createSession(userId, secret);
+    const session = this._account.createSession(userId, secret);
+    this.triggerAuthCheck();
+    return session;
   }
 
   /**
@@ -825,7 +833,8 @@ export class Account {
    * @returns An empty object.
    */
   async logout(): Promise<Record<string, never>> {
-    return this.deleteSession();
+    await this.deleteSession();
+    return {};
   }
 
   /**
