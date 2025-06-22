@@ -11,6 +11,7 @@ import {
 import {
   Observable,
   Subject,
+  catchError,
   debounceTime,
   distinctUntilChanged,
   from,
@@ -65,6 +66,7 @@ export class Account {
         this._triggerManualAuthCheck$,
       ).pipe(
         switchMap(() => from(this.get<TPrefs>())),
+        catchError((error) => of(null)),
         debounceTime(50),
         distinctUntilChanged(deepEqual),
         shareReplay(1),
@@ -86,15 +88,13 @@ export class Account {
    * @template TPrefs The type of the user's preferences.
    * @returns The user's data.
    */
-  async get<
-    TPrefs extends Models.Preferences,
-  >(): Promise<Models.User<TPrefs> | null> {
+  async get<TPrefs extends Models.Preferences>(): Promise<Models.User<TPrefs>> {
     try {
       const account = await this._account.get<TPrefs>();
       return account;
     } catch (error) {
       console.error('ngx-appwrite: account > get:', error);
-      return null;
+      throw error;
     }
   }
 
