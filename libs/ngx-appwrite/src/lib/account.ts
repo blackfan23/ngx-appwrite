@@ -12,8 +12,6 @@ import {
   Observable,
   Subject,
   catchError,
-  debounceTime,
-  distinctUntilChanged,
   from,
   merge,
   of,
@@ -21,7 +19,7 @@ import {
   startWith,
   switchMap,
 } from 'rxjs';
-import { deepEqual, watch } from './helpers';
+import { watch } from './helpers';
 import { CLIENT } from './setup';
 
 @Injectable({
@@ -67,8 +65,6 @@ export class Account {
       ).pipe(
         switchMap(() => from(this.get<TPrefs>())),
         catchError((error) => of(null)),
-        debounceTime(50),
-        distinctUntilChanged(deepEqual),
         shareReplay(1),
       );
     }
