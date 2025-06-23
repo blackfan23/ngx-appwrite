@@ -25,6 +25,7 @@ export class AppComponent implements OnInit {
         SECRETS.PASSWORD,
       );
       const account = await this.account.get<{ hello: string }>();
+      console.log('🚀 ~ AppComponent ~ ngOnInit ~ account:', account);
     }
   }
 }
