@@ -26,7 +26,7 @@ export abstract class AppwriteAdapter<DocumentShape extends Models.Document> {
    * @throws {AppwriteException}
    * @returns {Promise<DocumentShape>}
    */
-  public async create(
+  public async createDocument(
     awDocument: DocumentShape extends Models.DefaultDocument
       ? Models.DataWithoutDocumentKeys
       : Omit<DocumentShape, keyof Models.Document>,
@@ -36,9 +36,9 @@ export abstract class AppwriteAdapter<DocumentShape extends Models.Document> {
   ): Promise<DocumentShape> {
     const data = await this.databases.createDocument<DocumentShape>(
       this.collectionId,
+      documentId,
       awDocument,
       permissions,
-      documentId,
       alternativeDatabaseId,
     );
 

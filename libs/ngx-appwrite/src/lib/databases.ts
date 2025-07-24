@@ -56,12 +56,12 @@ export class Databases {
    */
   createDocument<Document extends Models.Document = Models.DefaultDocument>(
     collectionId: string,
+    documentId: string = ID.unique(),
     data: Document extends Models.DefaultDocument
       ? Models.DataWithoutDocumentKeys
       : Omit<Document, keyof Models.Document>,
     permissions?: string[],
     alternateDatabaseId?: string,
-    documentId: string = ID.unique(),
   ): Promise<Document> {
     const databaseId = alternateDatabaseId ?? DEFAULT_DATABASE_ID();
 
