@@ -27,30 +27,14 @@ export abstract class AppwriteAdapter<DocumentShape extends Models.Document> {
    * @returns {Promise<DocumentShape>}
    */
   public async create(
-    awDocument: Omit<
-      DocumentShape,
-      | '$id'
-      | '$collectionId'
-      | '$databaseId'
-      | '$updatedAt'
-      | '$createdAt'
-      | '$permissions'
-    >,
+    awDocument: DocumentShape extends Models.DefaultDocument
+      ? Models.DataWithoutDocumentKeys
+      : Omit<DocumentShape, keyof Models.Document>,
     permissions: string[] = [],
     documentId: string = ID.unique(),
     alternativeDatabaseId?: string,
   ): Promise<DocumentShape> {
-    const data = await this.databases.createDocument<
-      Omit<
-        DocumentShape,
-        | '$id'
-        | '$collectionId'
-        | '$databaseId'
-        | '$updatedAt'
-        | '$createdAt'
-        | '$permissions'
-      >
-    >(
+    const data = await this.databases.createDocument<DocumentShape>(
       this.collectionId,
       awDocument,
       permissions,
@@ -72,23 +56,25 @@ export abstract class AppwriteAdapter<DocumentShape extends Models.Document> {
    * integration](/docs/server/databases#databasesCreateCollection) API or
    * directly from your database console.
    * @param {Partial<DocumentShape>} awDocument
+   * @param {string} documentId
    * @param {string[]} [permissions]
    * @param {string} [alternativeDatabaseId]
    * @throws {AppwriteException}
    * @returns {Promise<T & Models.Document>}
    */
-  public async update(
-    awDocument: Partial<DocumentShape> & { $id: string },
+  public async updateDocument(
+    awDocument: Partial<
+      DocumentShape extends Models.DefaultDocument
+        ? Models.DataWithoutDocumentKeys
+        : Omit<DocumentShape, keyof Models.Document>
+    >,
+    documentId: string,
     permissions: string[] = [],
     alternativeDatabaseId?: string,
   ) {
-    if (!awDocument.$id) {
-      throw new Error('Document must have an id');
-    }
-
     const data = await this.databases.updateDocument<DocumentShape>(
       this.collectionId,
-      awDocument.$id,
+      documentId,
       awDocument,
       permissions,
       alternativeDatabaseId,
@@ -108,19 +94,22 @@ export abstract class AppwriteAdapter<DocumentShape extends Models.Document> {
    * collection resource using either a [server
    * integration](/docs/server/databases#databasesCreateCollection) API or
    * directly from your database console.
-   * @param {DocumentShape} awDocument
+   * @param {object} awDocument
+   * @param {string} documentId
    * @param {string[]} [permissions]
    * @param {string} [alternativeDatabaseId]
    * @throws {AppwriteException}
    * @returns {Promise<T & Models.Document>}
    */
-  public async upsert(
-    awDocument: Partial<DocumentShape>,
+  public async upsertDocument(
+    awDocument: object,
+    documentId: string,
     permissions: string[] = [],
     alternativeDatabaseId?: string,
   ) {
     const data = await this.databases.upsertDocument<DocumentShape>(
       this.collectionId,
+      documentId,
       awDocument,
       permissions,
       alternativeDatabaseId,

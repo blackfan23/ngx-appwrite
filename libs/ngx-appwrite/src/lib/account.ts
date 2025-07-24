@@ -1,7 +1,6 @@
 import { Injectable, Provider } from '@angular/core';
 import {
   Account as AppwriteAccount,
-  AppwriteException,
   AuthenticationFactor,
   AuthenticatorType,
   ID,
@@ -113,20 +112,27 @@ export class Account {
    * @param userId The user's ID.
    * @returns The newly created user.
    */
-  async create<T extends Models.Preferences>(
+  async create<
+    Preferences extends Models.Preferences = Models.DefaultPreferences,
+  >(
     email: string,
     password: string,
-    defaultPrefs: T = {} as T,
+    defaultPrefs: Preferences = {} as Preferences,
     name?: string,
     userId: string = ID.unique(),
-  ): Promise<Models.User<T>> {
-    const account = await this._account.create(userId, email, password, name);
+  ): Promise<Models.User<Preferences>> {
+    const account = await this._account.create<Preferences>(
+      userId,
+      email,
+      password,
+      name,
+    );
     if (account) {
       this.triggerAuthCheck();
       await this.updatePrefs(defaultPrefs);
     }
 
-    return account as Models.User<T>;
+    return account as Models.User<Preferences>;
   }
 
   /**
@@ -820,11 +826,14 @@ export class Account {
    * @returns {Promise<Models.User<T>>}
    */
   async convertAnonymousAccountWithEmailAndPassword<
-    T extends Models.Preferences,
-  >(email: string, password: string): Promise<Models.User<T>> {
-    const account = await this._account.updateEmail(email, password);
+    Preferences extends Models.Preferences = Models.DefaultPreferences,
+  >(email: string, password: string): Promise<Models.User<Preferences>> {
+    const account = await this._account.updateEmail<Preferences>(
+      email,
+      password,
+    );
     this.triggerAuthCheck();
-    return account as Models.User<T>;
+    return account as Models.User<Preferences>;
   }
 
   /**

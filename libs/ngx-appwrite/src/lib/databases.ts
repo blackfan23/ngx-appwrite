@@ -44,49 +44,25 @@ export class Databases {
   }
 
   /**
-   * Cleans the data by removing any properties that start with a '$'.
+   * Create a new Document. Before using this route, you should create a new collection resource using either a [server integration](https://appwrite.io/docs/server/databases#databasesCreateCollection) API or directly from your database console.
    *
-   * @param data The data to clean.
-   * @returns The cleaned data.
-   *
+   * @param {string} collectionId
+   * @param {string} documentId
+   * @param {Document extends Models.DefaultDocument ? Models.DataWithoutDocumentKeys : Omit<Document, keyof Models.Document>} data
+   * @param {string[]} permissions
+   * @param {string} alternateDatabaseId
+   * @throws {AppwriteException}
+   * @returns {Promise<Document>}
    */
-  private _cleanData<T>(data: T): T {
-    if (data === null || data === undefined) {
-      return data;
-    }
-
-    const newData = { ...data };
-
-    for (const key in newData) {
-      if (key.startsWith('$')) {
-        delete newData[key];
-      }
-    }
-    return newData;
-  }
-
-  /**
-   * Create Document
-   *
-   * Create a new Document. Before using this route, you should create a new
-   * collection resource using either a [server
-   * integration](/docs/server/databases#databasesCreateCollection) API or
-   * directly from your database console.
-   *
-   * @param collectionId
-   * @param data
-   * @param permissions
-   * @param documentId
-   * @param alternateDatabaseId
-   * @returns
-   */
-  createDocument<CreateDocumentShape extends Record<string, unknown>>(
+  createDocument<Document extends Models.Document = Models.DefaultDocument>(
     collectionId: string,
-    data: Partial<CreateDocumentShape>,
+    data: Document extends Models.DefaultDocument
+      ? Models.DataWithoutDocumentKeys
+      : Omit<Document, keyof Models.Document>,
     permissions?: string[],
-    documentId: string = ID.unique(),
     alternateDatabaseId?: string,
-  ): Promise<(CreateDocumentShape & Models.Document) | null> {
+    documentId: string = ID.unique(),
+  ): Promise<Document> {
     const databaseId = alternateDatabaseId ?? DEFAULT_DATABASE_ID();
 
     if (!databaseId) {
@@ -94,61 +70,51 @@ export class Databases {
     }
 
     return this._call(
-      this._databases.createDocument(
+      this._databases.createDocument<Document>(
         databaseId,
         collectionId,
         documentId,
-        this._cleanData(data),
+        data,
         permissions,
       ),
-    ) as Promise<(CreateDocumentShape & Models.Document) | null>;
+    ) as Promise<Document>;
   }
 
   /**
-   * Upsert Document
+   * **WARNING: Experimental Feature** - This endpoint is experimental and not yet officially supported. It may be subject to breaking changes or removal in future versions.
    *
-   * Create a new Document if it can't be found (using $id), otherwise the document is updated.
+   * Create or update a Document. Before using this route, you should create a new collection resource using either a [server integration](https://appwrite.io/docs/server/databases#databasesCreateCollection) API or directly from your database console.
    *
-   * This will use incurr a read and a write to the database.
-   *
-   * Before using this route, you should create a new
-   * collection resource using either a [server
-   * integration](/docs/server/databases#databasesCreateCollection) API or
-   * directly from your database console.
-   *
-   * @param collectionId
-   * @param data
-   * @param permissions
-   * @param alternateDatabaseId
-   * @returns
+   * @param {string} collectionId
+   * @param {string} documentId
+   * @param {object} data
+   * @param {string[]} permissions
+   * @param {string} alternateDatabaseId
+   * @throws {AppwriteException}
+   * @returns {Promise<Document>}
    */
-  async upsertDocument<DocumentShape extends Models.Document>(
+  upsertDocument<Document extends Models.Document = Models.DefaultDocument>(
     collectionId: string,
-    data: Partial<DocumentShape>,
+    documentId: string,
+    data: object,
     permissions?: string[],
     alternateDatabaseId?: string,
-  ): Promise<(Models.Document & DocumentShape) | null> {
+  ): Promise<Document> {
     const databaseId = alternateDatabaseId ?? DEFAULT_DATABASE_ID();
 
     if (!databaseId) {
       throw new Error('Database ID is not set.');
     }
 
-    const id = data.$id ?? ID.unique();
-    const doc = await this.getDocument<DocumentShape>(collectionId, id);
-    if (doc) {
-      const merged = { ...doc, ...data };
-
-      return this.updateDocument<DocumentShape>(collectionId, id, merged);
-    }
-
-    return this.createDocument(
-      collectionId,
-      this._cleanData(data),
-      permissions,
-      ID.unique(),
-      databaseId,
-    );
+    return this._call(
+      this._databases.upsertDocument<Document>(
+        databaseId,
+        collectionId,
+        documentId,
+        data,
+        permissions,
+      ),
+    ) as Promise<Document>;
   }
 
   /**
@@ -228,13 +194,17 @@ export class Databases {
    * @param alternateDatabaseId
    * @returns
    */
-  updateDocument<DocumentShape extends Models.Document>(
+  updateDocument<Document extends Models.Document = Models.DefaultDocument>(
     collectionId: string,
     documentId: string,
-    data: Partial<DocumentShape>,
+    data: Partial<
+      Document extends Models.DefaultDocument
+        ? Models.DataWithoutDocumentKeys
+        : Omit<Document, keyof Models.Document>
+    >,
     permissions?: string[],
     alternateDatabaseId?: string,
-  ): Promise<DocumentShape | null> {
+  ): Promise<Document | null> {
     const databaseId = alternateDatabaseId ?? DEFAULT_DATABASE_ID();
 
     if (!databaseId) {
@@ -242,11 +212,11 @@ export class Databases {
     }
 
     return this._call(
-      this._databases.updateDocument<DocumentShape>(
+      this._databases.updateDocument<Document>(
         databaseId,
         collectionId,
         documentId,
-        this._cleanData(data),
+        data,
         permissions,
       ),
     );
