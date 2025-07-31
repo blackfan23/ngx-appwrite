@@ -1,11 +1,5 @@
 import { Injectable, Provider } from '@angular/core';
-import {
-  Databases as AppwriteDatabases,
-  AppwriteException,
-  ID,
-  Models,
-  Query,
-} from 'appwrite';
+import { Databases as AppwriteDatabases, ID, Models, Query } from 'appwrite';
 import {
   Observable,
   distinctUntilChanged,
@@ -23,25 +17,6 @@ import { CLIENT, DEFAULT_DATABASE_ID } from './setup';
 export class Databases {
   private readonly _databases = new AppwriteDatabases(CLIENT());
   private readonly _client$ = of(CLIENT()).pipe(shareReplay(1));
-
-  /**
-   * A function that wraps a promise and handles AppwriteExceptions.
-   *
-   * @param promise - The promise to wrap.
-   * @returns The result of the promise.
-   * @throws If the promise rejects with a non-AppwriteException error.
-   */
-  private async _call<T>(promise: Promise<T>): Promise<T | null> {
-    try {
-      return await promise;
-    } catch (e) {
-      if (e instanceof AppwriteException) {
-        console.warn(e.message);
-        return null;
-      }
-      throw e;
-    }
-  }
 
   /**
    * Create a new Document. Before using this route, you should create a new collection resource using either a [server integration](https://appwrite.io/docs/server/databases#databasesCreateCollection) API or directly from your database console.
@@ -69,15 +44,13 @@ export class Databases {
       throw new Error('Database ID is not set.');
     }
 
-    return this._call(
-      this._databases.createDocument<Document>(
-        databaseId,
-        collectionId,
-        documentId,
-        data,
-        permissions,
-      ),
-    ) as Promise<Document>;
+    return this._databases.createDocument<Document>(
+      databaseId,
+      collectionId,
+      documentId,
+      data,
+      permissions,
+    );
   }
 
   /**
@@ -87,7 +60,7 @@ export class Databases {
    *
    * @param {string} collectionId
    * @param {string} documentId
-   * @param {object} data
+   * @param {Document extends Models.DefaultDocument ? Models.DataWithoutDocumentKeys : Omit<Document, keyof Models.Document>} data
    * @param {string[]} permissions
    * @param {string} alternateDatabaseId
    * @throws {AppwriteException}
@@ -106,15 +79,13 @@ export class Databases {
       throw new Error('Database ID is not set.');
     }
 
-    return this._call(
-      this._databases.upsertDocument<Document>(
-        databaseId,
-        collectionId,
-        documentId,
-        data,
-        permissions,
-      ),
-    ) as Promise<Document>;
+    return this._databases.upsertDocument<Document>(
+      databaseId,
+      collectionId,
+      documentId,
+      this.cleanData(data),
+      permissions,
+    );
   }
 
   /**
@@ -134,20 +105,18 @@ export class Databases {
     documentId: string,
     queries?: string[],
     alternateDatabaseId?: string,
-  ): Promise<DocumentShape | null> {
+  ): Promise<DocumentShape> {
     const databaseId = alternateDatabaseId ?? DEFAULT_DATABASE_ID();
 
     if (!databaseId) {
       throw new Error('Database ID is not set.');
     }
 
-    return this._call(
-      this._databases.getDocument<DocumentShape>(
-        databaseId,
-        collectionId,
-        documentId,
-        queries,
-      ),
+    return this._databases.getDocument<DocumentShape>(
+      databaseId,
+      collectionId,
+      documentId,
+      queries,
     );
   }
 
@@ -166,19 +135,17 @@ export class Databases {
     collectionId: string,
     queries?: string[],
     alternateDatabaseId?: string,
-  ): Promise<Models.DocumentList<DocumentShape> | null> {
+  ): Promise<Models.DocumentList<DocumentShape>> {
     const databaseId = alternateDatabaseId ?? DEFAULT_DATABASE_ID();
 
     if (!databaseId) {
       throw new Error('Database ID is not set.');
     }
 
-    return this._call(
-      this._databases.listDocuments<DocumentShape>(
-        databaseId,
-        collectionId,
-        queries,
-      ),
+    return this._databases.listDocuments<DocumentShape>(
+      databaseId,
+      collectionId,
+      queries,
     );
   }
   /**
@@ -204,21 +171,19 @@ export class Databases {
     >,
     permissions?: string[],
     alternateDatabaseId?: string,
-  ): Promise<Document | null> {
+  ): Promise<Document> {
     const databaseId = alternateDatabaseId ?? DEFAULT_DATABASE_ID();
 
     if (!databaseId) {
       throw new Error('Database ID is not set.');
     }
 
-    return this._call(
-      this._databases.updateDocument<Document>(
-        databaseId,
-        collectionId,
-        documentId,
-        data,
-        permissions,
-      ),
+    return this._databases.updateDocument(
+      databaseId,
+      collectionId,
+      documentId,
+      this.cleanData(data),
+      permissions,
     );
   }
 
@@ -236,16 +201,14 @@ export class Databases {
     collectionId: string,
     documentId: string,
     alternateDatabaseId?: string,
-  ): Promise<Record<string, unknown> | null> {
+  ): Promise<Record<string, unknown>> {
     const databaseId = alternateDatabaseId ?? DEFAULT_DATABASE_ID();
 
     if (!databaseId) {
       throw new Error('Database ID is not set.');
     }
 
-    return this._call(
-      this._databases.deleteDocument(databaseId, collectionId, documentId),
-    );
+    return this._databases.deleteDocument(databaseId, collectionId, documentId);
   }
 
   /**
@@ -263,7 +226,7 @@ export class Databases {
     queries: (string | Query)[] = [],
     events?: string | string[],
     alternativeDatabaseId?: string,
-  ): Observable<Models.DocumentList<DocumentShape> | null> {
+  ): Observable<Models.DocumentList<DocumentShape>> {
     const databaseId = alternativeDatabaseId ?? DEFAULT_DATABASE_ID();
 
     if (!databaseId) {
@@ -299,7 +262,7 @@ export class Databases {
     queries: (string | Query)[] = [],
     events?: string | string[],
     alternativeDatabaseId?: string,
-  ): Observable<DocumentShape | null> {
+  ): Observable<DocumentShape> {
     const databaseId = alternativeDatabaseId ?? DEFAULT_DATABASE_ID();
 
     if (!databaseId) {
@@ -320,6 +283,16 @@ export class Databases {
       ),
       distinctUntilChanged(deepEqual),
     );
+  }
+  // remove all appwrite specific fields, all fields starting with $ are appwrite specific
+  private cleanData(data: any): any {
+    const result = { ...data };
+    Object.keys(result).forEach((key) => {
+      if (key.startsWith('$')) {
+        delete result[key];
+      }
+    });
+    return result;
   }
 }
 

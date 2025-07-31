@@ -19,6 +19,7 @@ const AppwriteDocumentSchema = object({
   $createdAt: string(),
   $updatedAt: string(),
   $permissions: fallback(array(string()), []),
+  $sequence: fallback(number(), 0),
 });
 
 // schema for friends, merges base document

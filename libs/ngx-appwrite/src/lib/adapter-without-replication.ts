@@ -103,7 +103,7 @@ export abstract class AppwriteAdapter<DocumentShape extends Models.Document> {
    */
   public async upsertDocument(
     awDocument: object,
-    documentId: string,
+    documentId: string = ID.unique(),
     permissions: string[] = [],
     alternativeDatabaseId?: string,
   ) {

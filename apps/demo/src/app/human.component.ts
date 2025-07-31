@@ -14,6 +14,7 @@ import {
   Human,
   HumansRxdbService,
 } from './appwrite.rxdb.service';
+import { FriendsService } from './appwrite.service';
 
 @Component({
   selector: 'app-human',
@@ -278,6 +279,7 @@ export class HumanComponent implements OnInit {
   private formBuilder = inject(FormBuilder);
   private humansService = inject(HumansRxdbService);
   private aliensService = inject(AliensRxdbService);
+  private friendsService = inject(FriendsService);
 
   currentEntityType: 'human' | 'alien' = 'human';
 
@@ -303,6 +305,30 @@ export class HumanComponent implements OnInit {
     console.log('Humans:', humans);
     const aliens = await this.aliensService.documentList();
     console.log('Aliens:', aliens);
+
+    // add a friend
+    await this.friendsService.createDocument({
+      name: 'John Doe',
+      age: 30,
+    });
+
+    const friends = await this.friendsService.documentList();
+    console.log('Friends:', friends);
+
+    // update a friend
+    const friend = friends.documents[0];
+    friend.name = `${Math.random().toFixed(2)} Doe`;
+    await this.friendsService.updateDocument(friend, friend.$id);
+
+    // upsert a friend
+    await this.friendsService.upsertDocument({
+      name: 'John Doe2',
+      age: 30,
+    });
+
+    // delete last friend
+    const lastFriend = friends.documents[friends.documents.length - 1];
+    await this.friendsService.delete(lastFriend.$id);
   }
 
   saveEntity(): void {

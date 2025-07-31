@@ -11,7 +11,7 @@ import { SECRETS } from './secrets.env';
 addRxPlugin(RxDBDevModePlugin);
 
 // test data for later
-export const TEST_COLLECTION = '65fc3a62a07dbc4f3dc8';
+export const TEST_COLLECTION = 'friends';
 
 export const appConfig: ApplicationConfig = {
   providers: [
