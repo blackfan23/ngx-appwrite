@@ -1,31 +1,45 @@
 import { Client, RealtimeResponseEvent } from 'appwrite';
-import { Observable, Subscriber } from 'rxjs';
+import { Observable } from 'rxjs';
 
 export const watch = <T>(
   client: Client,
   channel: string | string[],
   events?: string | string[],
 ): Observable<RealtimeResponseEvent<T>> => {
-  const observable = new Observable<RealtimeResponseEvent<T>>(
-    (observer: Subscriber<RealtimeResponseEvent<T>>) => {
-      try {
-        client.subscribe<T>(channel, (response: RealtimeResponseEvent<T>) => {
-          if (!events) {
-            observer.next(response);
-          } else if (
-            (typeof events === 'string' && response.events.includes(events)) ||
-            intersection(response.events, events)
-          ) {
-            observer.next(response);
-          }
-        });
-      } catch (error) {
-        console.error('Error while watching channel: ', channel);
-        if (error instanceof Error) observer.error(error.message);
+  return new Observable<RealtimeResponseEvent<T>>((observer) => {
+    const handleResponse = (response: RealtimeResponseEvent<T>): void => {
+      if (!events) {
+        observer.next(response);
+        return;
       }
-    },
-  );
-  return observable;
+
+      const eventList = Array.isArray(events) ? events : [events];
+      const hasMatchingEvent = eventList.some((event) =>
+        response.events.includes(event),
+      );
+
+      if (hasMatchingEvent) {
+        observer.next(response);
+      }
+    };
+
+    try {
+      const unsubscribe = client.subscribe<T>(channel, handleResponse);
+
+      // Cleanup function
+      return () => {
+        try {
+          unsubscribe();
+        } catch (error) {
+          console.error('Error while unsubscribing:', error);
+        }
+      };
+    } catch (error) {
+      console.error('Error while watching channel:', channel, error);
+      observer.error(error);
+      return undefined;
+    }
+  });
 };
 
 export const wait = (seconds: number): Promise<void> => {
@@ -34,32 +48,7 @@ export const wait = (seconds: number): Promise<void> => {
   });
 };
 
-export const deepEqual = <T>(obj1: T, obj2: T) => {
+export const deepEqual = <T>(obj1: T, obj2: T): boolean => {
   return JSON.stringify(obj1) === JSON.stringify(obj2);
 };
 
-function intersection(...args: (string | string[])[]): string[] {
-  const arrays: string[][] = args.map((arg) =>
-    Array.isArray(arg) ? arg : [arg],
-  );
-
-  if (arrays.length === 0) {
-    return [];
-  }
-
-  const firstArray = arrays[0];
-  const uniqueValues = new Set(firstArray);
-
-  for (let i = 1; i < arrays.length; i++) {
-    const currentArray = arrays[i];
-
-    for (let j = 0; j < currentArray.length; j++) {
-      const value = currentArray[j];
-      if (!uniqueValues.has(value)) {
-        uniqueValues.delete(value);
-      }
-    }
-  }
-
-  return Array.from(uniqueValues);
-}

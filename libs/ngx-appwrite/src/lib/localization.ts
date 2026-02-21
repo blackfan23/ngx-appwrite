@@ -1,12 +1,13 @@
-import { Injectable, Provider } from '@angular/core';
+import { inject, Injectable, Provider } from '@angular/core';
 import { AppwriteException, Locale as AppwriteLocale, Models } from 'appwrite';
-import { CLIENT } from './setup';
+import { APPWRITE_CLIENT } from './setup';
 
 @Injectable({
   providedIn: 'root',
 })
 export class Localization {
-  private readonly _locale = new AppwriteLocale(CLIENT());
+  private readonly _client = inject(APPWRITE_CLIENT);
+  private readonly _locale = new AppwriteLocale(this._client);
 
   /**
    * A function that wraps a promise and handles AppwriteExceptions.

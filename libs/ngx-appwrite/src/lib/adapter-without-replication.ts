@@ -1,14 +1,46 @@
-import { Injectable, inject } from '@angular/core';
+import {
+  Injectable,
+  ResourceRef,
+  Signal,
+  computed,
+  inject,
+} from '@angular/core';
+import { rxResource } from '@angular/core/rxjs-interop';
 import { ID, Models } from 'appwrite';
 import { Observable, map } from 'rxjs';
-import { Databases } from './databases';
+import { TablesDBService } from './tablesdb';
+
+// ! Do not remove this line, needed for build process
+const rxResourceWrapper = <ParamsType, ReturnType>(
+  $params: Signal<ParamsType>,
+  stream: (resource: { params: ParamsType }) => Observable<ReturnType>,
+  defaultValue: NoInfer<ReturnType> | (undefined & NoInfer<ReturnType>),
+): {
+  isLoading: Signal<boolean>;
+  error: Signal<unknown>;
+  data: Signal<ReturnType>;
+  resource: ResourceRef<ReturnType>;
+} => {
+  const resourceRef = rxResource({
+    params: () => $params(),
+    stream: (resource) => stream(resource),
+    defaultValue,
+  });
+
+  return {
+    isLoading: computed(() => resourceRef.isLoading()),
+    error: computed(() => resourceRef.error()),
+    data: computed(() => resourceRef.value()),
+    resource: resourceRef,
+  };
+};
 
 @Injectable({
   providedIn: 'root',
 })
-export abstract class AppwriteAdapter<DocumentShape extends Models.Document> {
-  private databases = inject(Databases);
-  protected abstract collectionId: string;
+export abstract class AppwriteAdapter<DocumentShape extends Models.Row> {
+  private tables = inject(TablesDBService);
+  protected abstract tablesId: string;
   protected abstract validationFn:
     | undefined
     | ((data: unknown) => DocumentShape);
@@ -20,150 +52,165 @@ export abstract class AppwriteAdapter<DocumentShape extends Models.Document> {
    * collection resource using either a [server
    * integration](/docs/server/databases#databasesCreateCollection) API or
    * directly from your database console.
-   * @param {DocumentShape} awDocument
-   * @param {string[]} [permissions]
-   * @param {string} [alternativeDatabaseId]
+   * @param {DocumentShape} params.data
+   * @param {string[]} [params.permissions]
+   * @param {string} [params.rowId]
+   * @param {string} [params.alternateDatabaseId]
+   * @param {string} [params.transactionId]
    * @throws {AppwriteException}
    * @returns {Promise<DocumentShape>}
    */
-  public async createDocument(
-    awDocument: DocumentShape extends Models.DefaultDocument
-      ? Models.DataWithoutDocumentKeys
-      : Omit<DocumentShape, keyof Models.Document>,
-    permissions: string[] = [],
-    documentId: string = ID.unique(),
-    alternativeDatabaseId?: string,
-  ): Promise<DocumentShape> {
-    const data = await this.databases.createDocument<DocumentShape>(
-      this.collectionId,
-      documentId,
-      awDocument,
-      permissions,
-      alternativeDatabaseId,
-    );
+  public async createRow(params: {
+    data: DocumentShape extends Models.DefaultRow
+      ? Partial<Models.Row> & Record<string, any>
+      : Partial<Models.Row> & Omit<DocumentShape, keyof Models.Row>;
+    rowId?: string;
+    permissions?: string[];
+    alternateDatabaseId?: string;
+    transactionId?: string;
+  }): Promise<DocumentShape> {
+    // remove all appwrite keys with an empty string
+    const data = Object.fromEntries(
+      Object.entries(params.data).filter(([key]) => !key.startsWith('$')),
+    ) as DocumentShape extends Models.DefaultRow
+      ? Partial<Models.Row> & Record<string, any>
+      : Partial<Models.Row> & Omit<DocumentShape, keyof Models.Row>;
+
+    const result = await this.tables.createRow<DocumentShape>({
+      tableId: this.tablesId,
+      rowId: params.rowId ?? ID.unique(),
+      data,
+      permissions: params.permissions,
+      alternateDatabaseId: params.alternateDatabaseId,
+      transactionId: params.transactionId,
+    });
 
     if (this.validationFn) {
-      return this.validationFn(data);
+      return this.validationFn(result);
     }
-    return data as DocumentShape;
+    return result;
   }
 
   /**
-   * Update Document
+   * Update Row
    *
-   * Updates a Document. Before using this route, you should create a new
+   * Updates a Row. Before using this route, you should create a new
    * collection resource using either a [server
    * integration](/docs/server/databases#databasesCreateCollection) API or
    * directly from your database console.
-   * @param {Partial<DocumentShape>} awDocument
-   * @param {string} documentId
-   * @param {string[]} [permissions]
-   * @param {string} [alternativeDatabaseId]
+   * @param {Row extends Models.DefaultRow ? Partial<Models.Row> & Record<string, any> : Partial<Models.Row> & Partial<Omit<Row, keyof Models.Row>>} params.data - Row data as JSON object. Include only columns and value pairs to be updated.
+   * @param {string} params.rowId - Row ID.
+   * @param {string[]} [params.permissions]
+   * @param {string} [params.alternateDatabaseId]
+   * @param {string} [params.transactionId]
    * @throws {AppwriteException}
-   * @returns {Promise<T & Models.Document>}
+   * @returns {Promise<DocumentShape>}
    */
-  public async updateDocument(
-    awDocument: Partial<
-      DocumentShape extends Models.DefaultDocument
-        ? Models.DataWithoutDocumentKeys
-        : Omit<DocumentShape, keyof Models.Document>
-    >,
-    documentId: string,
-    permissions: string[] = [],
-    alternativeDatabaseId?: string,
-  ) {
-    const data = await this.databases.updateDocument<DocumentShape>(
-      this.collectionId,
-      documentId,
-      awDocument,
-      permissions,
-      alternativeDatabaseId,
-    );
+  public async updateRow(params: {
+    data: DocumentShape extends Models.DefaultRow
+      ? Partial<Models.Row> & Record<string, any>
+      : Partial<Models.Row> & Partial<Omit<DocumentShape, keyof Models.Row>>;
+    rowId: string;
+    permissions?: string[];
+    alternateDatabaseId?: string;
+    transactionId?: string;
+  }): Promise<DocumentShape> {
+    const result = await this.tables.updateRow<DocumentShape>({
+      tableId: this.tablesId,
+      rowId: params.rowId,
+      data: params.data,
+      permissions: params.permissions,
+      alternateDatabaseId: params.alternateDatabaseId,
+      transactionId: params.transactionId,
+    });
 
     if (this.validationFn) {
-      return this.validationFn(data);
+      return this.validationFn(result);
     }
-    return data;
+    return result;
   }
 
   /**
-   * Upsert Document
+   * Upsert Row
    *
-   * Upserts a Document. If an { $id: string } exists on the document, it is updated, otherwise a new document is created
-   * Before using this route, you should create a new
-   * collection resource using either a [server
-   * integration](/docs/server/databases#databasesCreateCollection) API or
-   * directly from your database console.
-   * @param {object} awDocument
-   * @param {string} documentId
-   * @param {string[]} [permissions]
-   * @param {string} [alternativeDatabaseId]
+   * Create or update a Row. Before using this route, you should create a new table resource using either a [server integration](https://appwrite.io/docs/references/cloud/server-dart/tablesDB#createTable) API or directly from your database console.
+   * @param {Row extends Models.DefaultRow ? Partial<Models.Row> & Record<string, any> : Partial<Models.Row> & Partial<Omit<Row, keyof Models.Row>>} params.data - Row data as JSON object. Include only columns and value pairs to be updated.
+   * @param {string} params.rowId - Row ID.
+   * @param {string[]} [params.permissions]
+   * @param {string} [params.alternateDatabaseId]
+   * @param {string} [params.transactionId]
    * @throws {AppwriteException}
-   * @returns {Promise<T & Models.Document>}
+   * @returns {Promise<DocumentShape>}
    */
-  public async upsertDocument(
-    awDocument: object,
-    documentId: string = ID.unique(),
-    permissions: string[] = [],
-    alternativeDatabaseId?: string,
-  ) {
-    const data = await this.databases.upsertDocument<DocumentShape>(
-      this.collectionId,
-      documentId,
-      awDocument,
-      permissions,
-      alternativeDatabaseId,
-    );
+  public async upsertRow(params: {
+    data: DocumentShape extends Models.DefaultRow
+      ? Partial<Models.Row> & Record<string, any>
+      : Partial<Models.Row> & Partial<Omit<DocumentShape, keyof Models.Row>>;
+    rowId: string;
+    permissions?: string[];
+    alternateDatabaseId?: string;
+    transactionId?: string;
+  }) {
+    const result = await this.tables.upsertRow<DocumentShape>({
+      tableId: this.tablesId,
+      rowId: params.rowId,
+      data: params.data,
+      permissions: params.permissions,
+      alternateDatabaseId: params.alternateDatabaseId,
+      transactionId: params.transactionId,
+    });
 
     if (this.validationFn) {
-      return this.validationFn(data);
+      return this.validationFn(result);
     }
-    return data;
+    return result;
   }
+
   /**
-   * Delete Document
+   * Delete Row
    *
-   * Deletes a Document.
+   * Deletes a Row.
    * Takes either a document id or a document object with an id
-   * @param {DocumentShape | string} awDocumentIdOrAwDocument
-   * @param {string} [alternateDatabaseId]
+   * @param {string} params.rowId - Row ID.
+   * @param {string} [params.alternateDatabaseId] - Alternate database ID.
    * @throws {AppwriteException}
-   * @returns {Promise<T & Models.Document>}
+   * @returns {Promise<T & Models.Row>}
    */
-  public async delete(
-    awDocumentIdOrAwDocument:
-      | string
-      | (Partial<DocumentShape> & { $id: string }),
-    alternateDatabaseId?: string,
-  ) {
-    const id =
-      typeof awDocumentIdOrAwDocument === 'string'
-        ? awDocumentIdOrAwDocument
-        : awDocumentIdOrAwDocument.$id;
-
-    if (!id) {
-      throw new Error('Document must have an id to be deleted');
+  public async deleteRow(params: {
+    rowId: string;
+    alternateDatabaseId?: string;
+  }) {
+    if (!params.rowId) {
+      throw new Error('Row must have an id to be deleted');
     }
-    return this.databases.deleteDocument(
-      this.collectionId,
-      id,
-      alternateDatabaseId,
-    );
+    return this.tables.deleteRow({
+      tableId: this.tablesId,
+      rowId: params.rowId,
+      alternateDatabaseId: params.alternateDatabaseId,
+    });
   }
 
-  public async document(
-    documentId: string,
-    alternativeDatabaseId?: string,
-  ): Promise<DocumentShape> {
-    const data = await this.databases.getDocument<DocumentShape>(
-      this.collectionId,
-      documentId,
-      [],
-      alternativeDatabaseId,
-    );
+  public async getRow({
+    rowId,
+    queries,
+    alternateDatabaseId,
+    transactionId,
+  }: {
+    rowId: string;
+    queries?: string[];
+    alternateDatabaseId?: string;
+    transactionId?: string;
+  }): Promise<DocumentShape> {
+    const data = await this.tables.getRow<DocumentShape>({
+      tableId: this.tablesId,
+      rowId,
+      queries,
+      alternateDatabaseId,
+      transactionId,
+    });
 
     if (!data) {
-      throw new Error(`Document with id ${documentId} not found`);
+      throw new Error(`Row with id ${rowId} not found`);
     }
 
     if (this.validationFn) {
@@ -172,73 +219,95 @@ export abstract class AppwriteAdapter<DocumentShape extends Models.Document> {
     return data;
   }
 
-  public async documentList(
-    queries: string[] = [],
-    alternativeDatabaseId?: string,
-  ): Promise<Models.DocumentList<DocumentShape>> {
-    const list = await this.databases.listDocuments<DocumentShape>(
-      this.collectionId,
+  public async listRows({
+    queries,
+    alternateDatabaseId,
+    transactionId,
+  }: {
+    queries?: string[];
+    alternateDatabaseId?: string;
+    transactionId?: string;
+  }): Promise<Models.RowList<DocumentShape>> {
+    const list = await this.tables.listRows<DocumentShape>({
+      tableId: this.tablesId,
       queries,
-      alternativeDatabaseId,
-    );
+      alternateDatabaseId,
+      transactionId,
+    });
 
     if (!list) {
       return {
         total: 0,
-        documents: [],
+        rows: [],
       };
     }
 
     const validationFn = this.validationFn;
 
     if (validationFn) {
-      list.documents = list.documents.map((item) => validationFn(item));
+      list.rows = list.rows.map((item) => validationFn(item));
     }
     return list;
   }
 
-  public documentList$(
-    queries: string[] = [],
-    events: string[] = [],
-    alternativeDatabaseId?: string,
-  ): Observable<Models.DocumentList<DocumentShape>> {
-    return this.databases
-      .collection$<DocumentShape>(
-        this.collectionId,
+  // RXJS
+  public listRows$({
+    queries,
+    events,
+    alternateDatabaseId,
+    transactionId,
+  }: {
+    queries?: string[];
+    events?: string[];
+    alternateDatabaseId?: string;
+    transactionId?: string;
+  }): Observable<Models.RowList<DocumentShape>> {
+    return this.tables
+      .listRows$<DocumentShape>({
+        tableId: this.tablesId,
         queries,
         events,
-        alternativeDatabaseId,
-      )
+        alternateDatabaseId,
+        transactionId,
+      })
       .pipe(
         map((list) => {
           if (!list) {
             return {
               total: 0,
-              documents: [],
+              rows: [],
             };
           }
+
           const validationFn = this.validationFn;
 
           if (validationFn) {
-            list.documents = list.documents.map((item) => validationFn(item));
+            list.rows = list.rows.map((item) => validationFn(item));
           }
           return list;
         }),
       );
   }
 
-  public document$(
-    documentId: string,
-    queries: string[] = [],
-    alternativeDatabaseId?: string,
-  ): Observable<DocumentShape | null> {
-    return this.databases
-      .document$<DocumentShape>(
-        this.collectionId,
-        documentId,
+  public row$({
+    rowId,
+    queries,
+    alternateDatabaseId,
+    transactionId,
+  }: {
+    rowId: string;
+    queries?: string[];
+    alternateDatabaseId?: string;
+    transactionId?: string;
+  }): Observable<DocumentShape | null> {
+    return this.tables
+      .row$<DocumentShape>({
+        tableId: this.tablesId,
+        rowId,
         queries,
-        alternativeDatabaseId,
-      )
+        alternateDatabaseId,
+        transactionId,
+      })
       .pipe(
         map((item) => {
           if (item && this.validationFn) {
@@ -247,5 +316,48 @@ export abstract class AppwriteAdapter<DocumentShape extends Models.Document> {
           return item;
         }),
       );
+  }
+  // Signals
+  public $listRows(
+    params: Signal<{
+      queries?: string[];
+      events?: string[];
+      alternateDatabaseId?: string;
+      transactionId?: string;
+    }>,
+  ): {
+    isLoading: Signal<boolean>;
+    error: Signal<unknown>;
+    data: Signal<Models.RowList<DocumentShape>>;
+    resource: ResourceRef<Models.RowList<DocumentShape>>;
+  } {
+    return rxResourceWrapper(
+      params,
+      (params) => this.listRows$(params.params),
+      {
+        total: 0,
+        rows: [],
+      } as Models.RowList<DocumentShape>,
+    );
+  }
+
+  public $row(
+    params: Signal<{
+      rowId: string;
+      queries?: string[];
+      alternateDatabaseId?: string;
+      transactionId?: string;
+    }>,
+  ): {
+    isLoading: Signal<boolean>;
+    error: Signal<unknown>;
+    data: Signal<DocumentShape | null>;
+    resource: ResourceRef<DocumentShape | null>;
+  } {
+    return rxResourceWrapper(
+      params,
+      (params) => this.row$(params.params),
+      null,
+    );
   }
 }

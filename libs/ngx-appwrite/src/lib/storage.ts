@@ -1,4 +1,4 @@
-import { Injectable, Provider } from '@angular/core';
+import { inject, Injectable, Provider } from '@angular/core';
 import {
   AppwriteException,
   Storage as AppwriteStorage,
@@ -8,32 +8,16 @@ import {
   Models,
   UploadProgress,
 } from 'appwrite';
-import { CLIENT } from './setup';
+import { APPWRITE_CLIENT } from './setup';
+import { AppwriteErrorHandler } from './error-handler';
 
 @Injectable({
   providedIn: 'root',
 })
 export class Storage {
-  private readonly _storage = new AppwriteStorage(CLIENT());
-
-  /**
-   * A function that wraps a promise and handles AppwriteExceptions.
-   *
-   * @param promise - The promise to wrap.
-   * @returns The result of the promise.
-   * @throws If the promise rejects with a non-AppwriteException error.
-   */
-  private async _call<T>(promise: Promise<T>): Promise<T | null> {
-    try {
-      return await promise;
-    } catch (e) {
-      if (e instanceof AppwriteException) {
-        console.warn(e.message);
-        return null;
-      }
-      throw e;
-    }
-  }
+  private readonly _client = inject(APPWRITE_CLIENT);
+  private readonly _storage = new AppwriteStorage(this._client);
+  private readonly _errorHandler = inject(AppwriteErrorHandler);
 
   /**
    * List Files
@@ -46,12 +30,21 @@ export class Storage {
    * @param search The search string to filter the results.
    * @returns A list of files.
    */
-  listFiles(
-    buckedId: string,
-    queries?: string[],
-    search?: string,
-  ): Promise<Models.FileList | null> {
-    return this._call(this._storage.listFiles(buckedId, queries, search));
+  listFiles({
+    bucketId,
+    queries,
+    search,
+    total,
+  }: {
+    bucketId: string;
+    queries?: string[];
+    search?: string;
+    total?: boolean;
+  }): Promise<Models.FileList | null> {
+    return this._errorHandler.wrap(
+      this._storage.listFiles({ bucketId, queries, search, total }),
+      null,
+    );
   }
 
   /**
@@ -64,8 +57,17 @@ export class Storage {
    * @param fileId The file ID.
    * @returns A file.
    */
-  getFile(bucketId: string, fileId: string): Promise<Models.File | null> {
-    return this._call(this._storage.getFile(bucketId, fileId));
+  getFile({
+    bucketId,
+    fileId,
+  }: {
+    bucketId: string;
+    fileId: string;
+  }): Promise<Models.File | null> {
+    return this._errorHandler.wrap(
+      this._storage.getFile({ bucketId, fileId }),
+      null,
+    );
   }
 
   /**
@@ -90,26 +92,42 @@ export class Storage {
    * @param rotation The rotation of the preview image.
    * @param background The background color of the preview image.
    * @param output The output format of the preview image.
+   * @param token The token to access the file preview.
    * @returns A URL to the file preview.
    */
-  getFilePreview(
-    bucketId: string,
-    fileId: string,
-    width?: number,
-    height?: number,
-    gravity?: ImageGravity,
-    quality?: number,
-    borderWidth?: number,
-    borderColor?: string,
-    borderRadius?: number,
-    opacity?: number,
-    rotation?: number,
-    background?: string,
-    output?: ImageFormat,
-    token?: string,
-  ): string | null {
+  getFilePreview({
+    bucketId,
+    fileId,
+    width,
+    height,
+    gravity,
+    quality,
+    borderWidth,
+    borderColor,
+    borderRadius,
+    opacity,
+    rotation,
+    background,
+    output,
+    token,
+  }: {
+    bucketId: string;
+    fileId: string;
+    width?: number;
+    height?: number;
+    gravity?: ImageGravity;
+    quality?: number;
+    borderWidth?: number;
+    borderColor?: string;
+    borderRadius?: number;
+    opacity?: number;
+    rotation?: number;
+    background?: string;
+    output?: ImageFormat;
+    token?: string;
+  }): string | null {
     try {
-      return this._storage.getFilePreview(
+      return this._storage.getFilePreview({
         bucketId,
         fileId,
         width,
@@ -124,13 +142,9 @@ export class Storage {
         background,
         output,
         token,
-      );
+      });
     } catch (e) {
-      if (e instanceof AppwriteException) {
-        console.warn(e.message);
-        return null;
-      }
-      throw e;
+      return this._errorHandler.handle(e, null);
     }
   }
 
@@ -143,17 +157,22 @@ export class Storage {
    *
    * @param bucketId The bucket ID.
    * @param fileId The file ID.
+   * @param token The token to access the file download.
    * @returns A URL to the file.
    */
-  getFileDownload(bucketId: string, fileId: string): string | null {
+  getFileDownload({
+    bucketId,
+    fileId,
+    token,
+  }: {
+    bucketId: string;
+    fileId: string;
+    token?: string;
+  }): string | null {
     try {
-      return this._storage.getFileDownload(bucketId, fileId);
+      return this._storage.getFileDownload({ bucketId, fileId, token });
     } catch (e) {
-      if (e instanceof AppwriteException) {
-        console.warn(e.message);
-        return null;
-      }
-      throw e;
+      return this._errorHandler.handle(e, null);
     }
   }
 
@@ -166,21 +185,22 @@ export class Storage {
    *
    * @param bucketId The bucket ID.
    * @param fileId The file ID.
+   * @param token The token to access the file view.
    * @returns A URL to the file.
    */
-  getFileForView(
-    bucketId: string,
-    fileId: string,
-    token?: string,
-  ): string | null {
+  getFileForView({
+    bucketId,
+    fileId,
+    token,
+  }: {
+    bucketId: string;
+    fileId: string;
+    token?: string;
+  }): string | null {
     try {
-      return this._storage.getFileView(bucketId, fileId, token);
+      return this._storage.getFileView({ bucketId, fileId, token });
     } catch (e) {
-      if (e instanceof AppwriteException) {
-        console.warn(e.message);
-        return null;
-      }
-      throw e;
+      return this._errorHandler.handle(e, null);
     }
   }
 
@@ -213,15 +233,28 @@ export class Storage {
    * @param onProgress A callback to track the upload progress.
    * @returns The created file.
    */
-  createFile(
-    bucketId: string,
-    file: File,
-    fileId: string = ID.unique(),
-    permissions?: string[],
-    onProgress?: (progress: UploadProgress) => void,
-  ): Promise<Models.File | null> {
-    return this._call(
-      this._storage.createFile(bucketId, fileId, file, permissions, onProgress),
+  createFile({
+    bucketId,
+    file,
+    fileId = ID.unique(),
+    permissions,
+    onProgress,
+  }: {
+    bucketId: string;
+    file: File;
+    fileId?: string;
+    permissions?: string[];
+    onProgress?: (progress: UploadProgress) => void;
+  }): Promise<Models.File | null> {
+    return this._errorHandler.wrap(
+      this._storage.createFile({
+        bucketId,
+        fileId,
+        file,
+        permissions,
+        onProgress,
+      }),
+      null,
     );
   }
 
@@ -237,14 +270,20 @@ export class Storage {
    * @param permissions The new permissions for the file.
    * @returns The updated file.
    */
-  updateFilePermissions(
-    bucketId: string,
-    fileId: string,
-    name?: string,
-    permissions?: string[],
-  ): Promise<Models.File | null> {
-    return this._call(
-      this._storage.updateFile(bucketId, fileId, name, permissions),
+  updateFilePermissions({
+    bucketId,
+    fileId,
+    name,
+    permissions,
+  }: {
+    bucketId: string;
+    fileId: string;
+    name?: string;
+    permissions?: string[];
+  }): Promise<Models.File | null> {
+    return this._errorHandler.wrap(
+      this._storage.updateFile({ bucketId, fileId, name, permissions }),
+      null,
     );
   }
 
@@ -258,11 +297,19 @@ export class Storage {
    * @param fileId The file ID.
    * @returns An empty object.
    */
-  deleteFile(
-    bucketId: string,
-    fileId: string,
-  ): Promise<Record<string, never> | null> {
-    return this._call(this._storage.deleteFile(bucketId, fileId));
+  deleteFile({
+    bucketId,
+    fileId,
+  }: {
+    bucketId: string;
+    fileId: string;
+  }): Promise<Record<string, never> | null> {
+    return this._errorHandler.wrap(
+      this._storage.deleteFile({ bucketId, fileId }) as Promise<
+        Record<string, never>
+      >,
+      null,
+    );
   }
 }
 

@@ -1,26 +1,10 @@
 {
   "name": "ngx-appwrite",
-  "author": "Julius Pargac <transferx23@googlemail.com>",
-  "version": "1.7.23",
+  "version": "1.8.1",
   "peerDependencies": {
-    "appwrite": "~18.1.1",
-    "rxjs": "~7.8.2",
-    "@angular/core": "~20.0.2",
-    "rxdb": "16.13.0"
+    "@angular/common": "^21.1.5",
+    "@angular/core": "^21.1.5",
+    "appwrite": "^21.5.0"
   },
-  "sideEffects": false,
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/blackfan23/ngx-appwrite.git"
-  },
-  "keywords": [
-    "Appwrite",
-    "Angular",
-    "Standalone",
-    "Library"
-  ],
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/blackfan23/ngx-appwrite/issues"
-  }
+  "sideEffects": false
 }

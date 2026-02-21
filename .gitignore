@@ -1,26 +1,23 @@
-# See http://help.github.com/ignore-files/ for more about ignoring files.
+# See https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
 
 # compiled output
 dist
 tmp
 out-tsc
+public
+
 
 # dependencies
 node_modules
-public
-apps/demo/src/app/secrets.env.ts
-apps/rxdb-demo/src/app/secrets.env.ts
 
 # IDEs and editors
 /.idea
-.npmrc
 .project
 .classpath
 .c9/
 *.launch
 .settings/
 *.sublime-workspace
-.cursor/
 
 # IDE - VSCode
 .vscode/*
@@ -45,8 +42,12 @@ Thumbs.db
 
 .nx/cache
 .nx/workspace-data
-
-.angular
-
 .cursor/rules/nx-rules.mdc
 .github/instructions/nx.instructions.md
+
+.angular
+.claude
+.playwright-mcp
+
+vite.config.*.timestamp*
+vitest.config.*.timestamp*

@@ -2,7 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.8.1] - 2026-02-21
+
+- Removed RXDB dependency and local replication (offline persistence) feature. It introduces complexity that is not acceptable for this library.
+- Updated the Appwrite Web SDK to version 21.5.0, which works with server version 1.8.X.
+- Added new service to make use of [Tables DB](https://appwrite.io/docs/references/1.8.x/client-web/tablesDB).
+- Updated dependencies for Angular 21.
+
+- **BREAKING**: The AppwriteAdapter class now uses the tableId property instead of the collectionId property.
+  Also some namechanges t.ex. onAuth() is now onAuth$(). Check the source code for more information.
+- **DEPRECATED**: The `Databases` service (`databases.ts`) is fully deprecated in favor of `TablesDB` (`tablesdb.ts`) and will be removed in the next major version to reduce bundle size and maintenance overhead.
+
 ## [1.7.4] - 2025-06-07
+
+Never released
 
 - Implemented RXDB local replication (also known as offline persistence) using the secondary entrypoint ngx-appwrite/replication (see the README).
 - Updated the Appwrite Web SDK to version 18.1.1, which works with server version 1.7.4.
@@ -79,6 +92,8 @@ Added this changelog file.
 
 Inital release
 
+[1.8.1]: https://github.com/blackfan23/ngx-appwrite/releases/tag/v1.8.1
+[1.7.4]: https://github.com/blackfan23/ngx-appwrite/releases/tag/v1.7.4
 [1.7.0]: https://github.com/blackfan23/ngx-appwrite/releases/tag/v1.7.0
 [1.6.2]: https://github.com/blackfan23/ngx-appwrite/releases/tag/v1.6.2
 [1.6.1]: https://github.com/blackfan23/ngx-appwrite/releases/tag/v1.6.1

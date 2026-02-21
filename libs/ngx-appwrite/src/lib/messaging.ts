@@ -1,16 +1,17 @@
-import { Injectable, Provider } from '@angular/core';
+import { inject, Injectable, Provider } from '@angular/core';
 import {
-  AppwriteException,
-  Messaging as AppwriteMessaging,
-  Models,
+    AppwriteException,
+    Messaging as AppwriteMessaging,
+    Models,
 } from 'appwrite';
-import { CLIENT } from './setup';
+import { APPWRITE_CLIENT } from './setup';
 
 @Injectable({
   providedIn: 'root',
 })
 export class Messaging {
-  private readonly _messaging = new AppwriteMessaging(CLIENT());
+  private readonly _client = inject(APPWRITE_CLIENT);
+  private readonly _messaging = new AppwriteMessaging(this._client);
 
   /**
    * A function that wraps a promise and handles AppwriteExceptions.
@@ -42,13 +43,17 @@ export class Messaging {
    * @param targetId The target ID.
    * @returns The created subscriber.
    */
-  createSubscriber(
-    topicId: string,
-    subscriberId: string,
-    targetId: string,
-  ): Promise<Models.Subscriber | null> {
+  createSubscriber({
+    topicId,
+    subscriberId,
+    targetId,
+  }: {
+    topicId: string;
+    subscriberId: string;
+    targetId: string;
+  }): Promise<Models.Subscriber | null> {
     return this._call(
-      this._messaging.createSubscriber(topicId, subscriberId, targetId),
+      this._messaging.createSubscriber({ topicId, subscriberId, targetId }),
     );
   }
 
@@ -61,11 +66,16 @@ export class Messaging {
    * @param subscriberId The subscriber ID.
    * @returns An empty object.
    */
-  deleteSubscriber(
-    topicId: string,
-    subscriberId: string,
-  ): Promise<Record<string, never> | null> {
-    return this._call(this._messaging.deleteSubscriber(topicId, subscriberId));
+  deleteSubscriber({
+    topicId,
+    subscriberId,
+  }: {
+    topicId: string;
+    subscriberId: string;
+  }): Promise<Record<string, never> | null> {
+    return this._call(
+      this._messaging.deleteSubscriber({ topicId, subscriberId }),
+    );
   }
 }
 

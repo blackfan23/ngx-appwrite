@@ -1,18 +1,19 @@
-import { Injectable, Provider } from '@angular/core';
+import { inject, Injectable, Provider } from '@angular/core';
 import {
-  AppwriteException,
-  Functions as AppwriteFunctions,
-  ExecutionMethod,
-  Models,
-  Query,
+    AppwriteException,
+    Functions as AppwriteFunctions,
+    ExecutionMethod,
+    Models,
+    Query,
 } from 'appwrite';
-import { CLIENT } from './setup';
+import { APPWRITE_CLIENT } from './setup';
 
 @Injectable({
   providedIn: 'root',
 })
 export class Functions {
-  private readonly _functions = new AppwriteFunctions(CLIENT());
+  private readonly _client = inject(APPWRITE_CLIENT);
+  private readonly _functions = new AppwriteFunctions(this._client);
 
   /**
    * A function that wraps a promise and handles AppwriteExceptions.
@@ -49,11 +50,11 @@ export class Functions {
     queries?: string[],
     search?: string,
   ): Promise<Models.ExecutionList | null> {
-    const allQueries = search
+    queries = search
       ? [Query.search('search', search), ...(queries ?? [])]
       : queries;
 
-    return this._call(this._functions.listExecutions(functionId, allQueries));
+    return this._call(this._functions.listExecutions({ functionId, queries }));
   }
 
   /**
@@ -67,28 +68,38 @@ export class Functions {
    * @param functionId The function ID.
    * @param body The body of the request.
    * @param async Whether to execute the function asynchronously.
-   * @param path The path of the request.
+   * @param xpath The path of the request.
    * @param method The method of the request.
    * @param headers The headers of the request.
    * @returns An execution.
    */
-  createExecution(
-    functionId: string,
-    body?: string,
-    async?: boolean,
-    path?: string,
-    method?: ExecutionMethod,
-    headers?: Record<string, string>,
-  ): Promise<Models.Execution | null> {
+  createExecution({
+    functionId,
+    body,
+    async,
+    xpath,
+    method,
+    headers,
+    scheduledAt,
+  }: {
+    functionId: string;
+    body?: string;
+    async?: boolean;
+    xpath?: string;
+    method?: ExecutionMethod;
+    headers?: object;
+    scheduledAt?: string;
+  }): Promise<Models.Execution | null> {
     return this._call(
-      this._functions.createExecution(
+      this._functions.createExecution({
         functionId,
         body,
         async,
-        path,
+        xpath,
         method,
         headers,
-      ),
+        scheduledAt,
+      }),
     );
   }
 
@@ -101,11 +112,16 @@ export class Functions {
    * @param executionId The execution ID.
    * @returns An execution.
    */
-  getExecution(
-    functionId: string,
-    executionId: string,
-  ): Promise<Models.Execution | null> {
-    return this._call(this._functions.getExecution(functionId, executionId));
+  getExecution({
+    functionId,
+    executionId,
+  }: {
+    functionId: string;
+    executionId: string;
+  }): Promise<Models.Execution | null> {
+    return this._call(
+      this._functions.getExecution({ functionId, executionId }),
+    );
   }
 }
 

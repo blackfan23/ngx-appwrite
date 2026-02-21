@@ -10,6 +10,7 @@ like RxJS streams where appropriate.
 
 | ngx-appwrite | Appwrite-Server | Angular | Appwrite-Web SDK |
 | ------------ | --------------- | ------- | ---------------- |
+| 1.8.1        | 1.8.X           | 21+     | 21.5.0           |
 | 1.7.4        | 1.7.X           | 19+     | 18.1.1           |
 | 1.7.0        | 1.6.X           | 16+     | 17.0.0           |
 | 1.6.X        | 1.6.X           | 16+     | 16.0.0           |
@@ -18,12 +19,6 @@ like RxJS streams where appropriate.
 
 ```bash
   npm install ngx-appwrite
-```
-
-If you want to use Data replication with RxDB with RXDB (see [here](https://appwrite.io/integrations/replication-rxdb)) you need to install the RXDB dependencies as well
-
-```bash
-  npm install rxdb
 ```
 
 ---
@@ -83,7 +78,7 @@ export class AppComponent implements OnInit {
       // output 'world'
 
        // observable stream on the users auth session
-      this.account.onAuth<{ hello: string }>()
+      this.account.onAuth$<{ hello: string }>()
       .subscribe((account: Models.User<{ hello: string }> | null) => {
         console.log(account?.prefs.hello);
       });
@@ -128,7 +123,7 @@ export type Friend = Input<typeof friendSchema>;
 })
 export class FriendsService extends AppwriteAdapter<Friend> {
   // required
-  protected collectionId = <COLLECTION_ID>;
+  protected tableId: string = <TABLE_ID>;
 
   // The appwrite adapter implements CRUD operations as well as the ability to validate retrieved data. If the validationFn property is undefined, no validation of incoming data is performed.
   protected validationFn = (data: unknown) =>

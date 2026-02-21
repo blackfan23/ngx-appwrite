@@ -1,29 +1,13 @@
-import { Injectable, Provider } from '@angular/core';
-import {
-  AppwriteException,
-  Teams as AppwriteTeams,
-  ID,
-  Models,
-} from 'appwrite';
-import { CLIENT } from './setup';
+import { inject, Injectable, Provider } from '@angular/core';
+import { Teams as AppwriteTeams, Models } from 'appwrite';
+import { APPWRITE_CLIENT } from './setup';
 
 @Injectable({
   providedIn: 'root',
 })
 export class Team {
-  private readonly _teams = new AppwriteTeams(CLIENT());
-
-  private async _call<T>(promise: Promise<T>): Promise<T | null> {
-    try {
-      return await promise;
-    } catch (e: unknown) {
-      if (e instanceof AppwriteException) {
-        console.error(e.message);
-        return null;
-      }
-      throw e;
-    }
-  }
+  private readonly _client = inject(APPWRITE_CLIENT);
+  private readonly _teams = new AppwriteTeams(this._client);
 
   /**
    * Create Team
@@ -37,12 +21,16 @@ export class Team {
    * @param teamId The team's ID.
    * @returns The created team.
    */
-  create<TPrefs extends Models.Preferences>(
-    name: string,
-    roles?: string[],
-    teamId: string = ID.unique(),
-  ): Promise<Models.Team<TPrefs> | null> {
-    return this._call(this._teams.create<TPrefs>(teamId, name, roles));
+  create<TPrefs extends Models.Preferences>({
+    name,
+    roles,
+    teamId,
+  }: {
+    name: string;
+    roles?: string[];
+    teamId: string;
+  }): Promise<Models.Team<TPrefs>> {
+    return this._teams.create<TPrefs>({ teamId, name, roles });
   }
 
   /**
@@ -55,11 +43,14 @@ export class Team {
    * @param search The search string to filter the results.
    * @returns A list of teams.
    */
-  list<TPrefs extends Models.Preferences>(
-    queries?: string[],
-    search?: string,
-  ): Promise<Models.TeamList<TPrefs> | null> {
-    return this._call(this._teams.list<TPrefs>(queries, search));
+  list<TPrefs extends Models.Preferences>({
+    queries,
+    search,
+  }: {
+    queries?: string[];
+    search?: string;
+  }): Promise<Models.TeamList<TPrefs>> {
+    return this._teams.list<TPrefs>({ queries, search });
   }
 
   /**
@@ -72,8 +63,8 @@ export class Team {
    */
   get<TPrefs extends Models.Preferences>(
     teamId: string,
-  ): Promise<Models.Team<TPrefs> | null> {
-    return this._call(this._teams.get<TPrefs>(teamId));
+  ): Promise<Models.Team<TPrefs>> {
+    return this._teams.get<TPrefs>({ teamId });
   }
 
   /**
@@ -86,11 +77,14 @@ export class Team {
    * @param name The new name for the team.
    * @returns The updated team.
    */
-  updateName<TPrefs extends Models.Preferences>(
-    teamId: string,
-    name: string,
-  ): Promise<Models.Team<TPrefs> | null> {
-    return this._call(this._teams.updateName<TPrefs>(teamId, name));
+  updateName<TPrefs extends Models.Preferences>({
+    teamId,
+    name,
+  }: {
+    teamId: string;
+    name: string;
+  }): Promise<Models.Team<TPrefs>> {
+    return this._teams.updateName<TPrefs>({ teamId, name });
   }
 
   /**
@@ -102,8 +96,8 @@ export class Team {
    * @param teamId The team's ID.
    * @returns An empty object.
    */
-  async delete(teamId: string): Promise<Record<string, never> | null> {
-    const result = await this._call(this._teams.delete(teamId));
+  async delete(teamId: string): Promise<Record<string, never>> {
+    const result = await this._teams.delete({ teamId });
     return result === undefined ? {} : result;
   }
 
@@ -133,26 +127,32 @@ export class Team {
    * @param name The name of the new member.
    * @returns The created membership.
    */
-  createMembership(
-    teamId: string,
-    roles: string[],
-    email?: string,
-    userId?: string,
-    phone?: string,
-    url?: string,
-    name?: string,
-  ): Promise<Models.Membership | null> {
-    return this._call(
-      this._teams?.createMembership(
-        teamId,
-        roles,
-        email,
-        userId,
-        phone,
-        url,
-        name,
-      ),
-    );
+  createMembership({
+    teamId,
+    roles,
+    email,
+    userId,
+    phone,
+    url,
+    name,
+  }: {
+    teamId: string;
+    roles: string[];
+    email?: string;
+    userId?: string;
+    phone?: string;
+    url?: string;
+    name?: string;
+  }): Promise<Models.Membership> {
+    return this._teams?.createMembership({
+      teamId,
+      roles,
+      email,
+      userId,
+      phone,
+      url,
+      name,
+    });
   }
 
   /**
@@ -166,12 +166,16 @@ export class Team {
    * @param search The search string to filter the results.
    * @returns A list of memberships.
    */
-  listMemberships(
-    teamId: string,
-    queries?: string[],
-    search?: string,
-  ): Promise<Models.MembershipList | null> {
-    return this._call(this._teams.listMemberships(teamId, queries, search));
+  listMemberships({
+    teamId,
+    queries,
+    search,
+  }: {
+    teamId: string;
+    queries?: string[];
+    search?: string;
+  }): Promise<Models.MembershipList> {
+    return this._teams.listMemberships({ teamId, queries, search });
   }
 
   /**
@@ -184,11 +188,14 @@ export class Team {
    * @param membershipId The membership ID.
    * @returns A membership.
    */
-  getMembership(
-    teamId: string,
-    membershipId: string,
-  ): Promise<Models.Membership | null> {
-    return this._call(this._teams.getMembership(teamId, membershipId));
+  getMembership({
+    teamId,
+    membershipId,
+  }: {
+    teamId: string;
+    membershipId: string;
+  }): Promise<Models.Membership> {
+    return this._teams.getMembership({ teamId, membershipId });
   }
 
   /**
@@ -203,14 +210,16 @@ export class Team {
    * @param roles The new roles for the member.
    * @returns The updated membership.
    */
-  updateMembership(
-    teamId: string,
-    membershipId: string,
-    roles: string[],
-  ): Promise<Models.Membership | null> {
-    return this._call(
-      this._teams.updateMembership(teamId, membershipId, roles),
-    );
+  updateMembership({
+    teamId,
+    membershipId,
+    roles,
+  }: {
+    teamId: string;
+    membershipId: string;
+    roles: string[];
+  }): Promise<Models.Membership> {
+    return this._teams.updateMembership({ teamId, membershipId, roles });
   }
 
   /**
@@ -230,15 +239,23 @@ export class Team {
    * @param secret The secret from the invitation.
    * @returns The updated membership.
    */
-  updateMembershipStatus(
-    teamId: string,
-    membershipId: string,
-    userId: string,
-    secret: string,
-  ): Promise<Models.Membership | null> {
-    return this._call(
-      this._teams.updateMembershipStatus(teamId, membershipId, userId, secret),
-    );
+  updateMembershipStatus({
+    teamId,
+    membershipId,
+    userId,
+    secret,
+  }: {
+    teamId: string;
+    membershipId: string;
+    userId: string;
+    secret: string;
+  }): Promise<Models.Membership> {
+    return this._teams.updateMembershipStatus({
+      teamId,
+      membershipId,
+      userId,
+      secret,
+    });
   }
 
   /**
@@ -252,13 +269,15 @@ export class Team {
    * @param membershipId The membership ID.
    * @returns An empty object.
    */
-  async deleteMembership(
-    teamId: string,
-    membershipId: string,
-  ): Promise<Record<string, never> | null> {
-    const result = await this._call(
-      this._teams.deleteMembership(teamId, membershipId),
-    );
+  async deleteMembership({
+    teamId,
+    membershipId,
+  }: {
+    teamId: string;
+    membershipId: string;
+  }): Promise<Record<string, never>> {
+    const result = await this._teams.deleteMembership({ teamId, membershipId });
+
     return result === undefined ? {} : result;
   }
 }

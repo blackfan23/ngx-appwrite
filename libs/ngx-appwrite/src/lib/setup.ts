@@ -1,4 +1,10 @@
-import { APP_INITIALIZER, InjectionToken, type Provider } from '@angular/core';
+import {
+  EnvironmentProviders,
+  inject,
+  InjectionToken,
+  makeEnvironmentProviders,
+  provideAppInitializer,
+} from '@angular/core';
 import { Client } from 'appwrite';
 import { AppwriteConfig } from './config';
 
@@ -7,51 +13,57 @@ export { ID } from 'appwrite';
 let __client: Client | undefined;
 let __defaultDatabaseId: string | undefined;
 
-export const CLIENT = () => {
-  if (!__client) {
-    throw new Error(
-      'Appwrite client not initialized, did you call initializeAppwrite?',
-    );
-  }
-  return __client;
-};
-
-export const DEFAULT_DATABASE_ID = (): string | undefined => {
-  if (!__defaultDatabaseId) {
-    console.warn(
-      'Appwrite default database id not initialized, can be passed inside provideAppwrite',
-    );
-  }
-  return __defaultDatabaseId;
-};
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const ConfigToken = new InjectionToken<any>('APPWRITE_USER_CONFIG');
-
-const initializeAppwrite = (config: AppwriteConfig) => {
-  return () => {
-    __client = new Client();
-
-    __client.setEndpoint(config.endpoint).setProject(config.project); //
-
-    if (config.defaultDatabase) {
-      console.log('Configured defaultDatabaseId: ', config.defaultDatabase);
-      __defaultDatabaseId = config.defaultDatabase;
+/**
+ * Injection token for the Appwrite Client.
+ * Can be used to inject the client directly into services.
+ */
+export const APPWRITE_CLIENT = new InjectionToken<Client>('APPWRITE_CLIENT', {
+  providedIn: 'root',
+  factory: () => {
+    if (!__client) {
+      throw new Error(
+        'Appwrite client not initialized, did you call provideAppwrite?',
+      );
     }
-  };
+    return __client;
+  },
+});
+
+/**
+ * Injection token for the default database ID.
+ * Can be used to inject the default database ID directly into services.
+ */
+export const APPWRITE_DEFAULT_DATABASE = new InjectionToken<string | undefined>(
+  'APPWRITE_DEFAULT_DATABASE',
+  {
+    providedIn: 'root',
+    factory: () => __defaultDatabaseId,
+  },
+);
+
+const ConfigToken = new InjectionToken<AppwriteConfig>('APPWRITE_USER_CONFIG');
+
+const initializeAppwrite = (config: AppwriteConfig): void => {
+  __client = new Client();
+
+  __client.setEndpoint(config.endpoint).setProject(config.project);
+
+  if (config.defaultDatabase) {
+    __defaultDatabaseId = config.defaultDatabase;
+  }
 };
 
-export const provideAppwrite = (config: AppwriteConfig): Provider[] => {
-  return [
+export const provideAppwrite = (
+  config: AppwriteConfig,
+): EnvironmentProviders => {
+  return makeEnvironmentProviders([
     {
       provide: ConfigToken,
       useValue: config,
     },
-    {
-      provide: APP_INITIALIZER,
-      useFactory: initializeAppwrite,
-      multi: true,
-      deps: [ConfigToken],
-    },
-  ];
+    provideAppInitializer(() => {
+      const config = inject(ConfigToken);
+      initializeAppwrite(config);
+    }),
+  ]);
 };

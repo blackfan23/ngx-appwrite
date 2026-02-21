@@ -1,4 +1,5 @@
-import { Injectable, Provider } from '@angular/core';
+import { inject, Injectable, Provider, Signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import {
   Account as AppwriteAccount,
   AuthenticationFactor,
@@ -8,20 +9,20 @@ import {
   OAuthProvider,
 } from 'appwrite';
 import {
-  Observable,
-  Subject,
+  BehaviorSubject,
   catchError,
-  debounceTime,
   distinctUntilChanged,
+  exhaustMap,
   from,
-  merge,
+  Observable,
   of,
   shareReplay,
-  startWith,
+  Subscription,
   switchMap,
 } from 'rxjs';
+import { AppwriteErrorHandler } from './error-handler';
 import { watch } from './helpers';
-import { CLIENT } from './setup';
+import { APPWRITE_CLIENT } from './setup';
 
 @Injectable({
   providedIn: 'root',
@@ -31,23 +32,33 @@ export class Account {
   /*                                    Setup                                   */
   /* -------------------------------------------------------------------------- */
 
-  private readonly _account = new AppwriteAccount(CLIENT());
-  private readonly _client$ = of(CLIENT()).pipe(shareReplay(1));
-  private readonly _watchAuthChannel$ = this._client$.pipe(
-    switchMap((client) => watch(client, 'account').pipe(startWith(null))),
-  );
-  private readonly _triggerManualAuthCheck$ = new Subject<boolean>();
+  private readonly _client = inject(APPWRITE_CLIENT);
+  private readonly _account = new AppwriteAccount(this._client);
+  private readonly _client$ = of(this._client).pipe(shareReplay(1));
+  private readonly _errorHandler = inject(AppwriteErrorHandler);
 
-  private _auth$:
-    | Observable<Models.User<Models.Preferences> | null>
-    | undefined;
+  private _authWatchSubscription: Subscription | undefined;
+  private _auth$ = new BehaviorSubject<Models.User<Models.Preferences> | null>(
+    null,
+  );
 
   /* -------------------------------------------------------------------------- */
   /*                                  Reactive                                  */
   /* -------------------------------------------------------------------------- */
 
   constructor() {
-    this._account = new AppwriteAccount(CLIENT());
+    this.initAuth();
+    this.updateAuthSubscription();
+  }
+
+  private async initAuth() {
+    try {
+      const user = await this.get();
+      this._auth$.next(user);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (error) {
+      this._auth$.next(null);
+    }
   }
 
   /**
@@ -56,23 +67,16 @@ export class Account {
    * @template TPrefs - The type of the user's preferences.
    * @returns An observable that emits the currently logged in user, or null.
    */
-  onAuth<
+  public onAuth$<
     TPrefs extends Models.Preferences,
   >(): Observable<Models.User<TPrefs> | null> {
-    if (!this._auth$) {
-      this._auth$ = merge(
-        this._watchAuthChannel$,
-        this._triggerManualAuthCheck$,
-      ).pipe(
-        debounceTime(100),
-        switchMap(() => from(this.get<TPrefs>())),
-        distinctUntilChanged((prev, curr) => prev.$id === curr.$id),
-        catchError((error) => of(null)),
-        shareReplay(1),
-      );
-    }
+    return this._auth$.asObservable() as Observable<Models.User<TPrefs> | null>;
+  }
 
-    return this._auth$ as Observable<Models.User<TPrefs> | null>;
+  public getAuthSignal<
+    TPrefs extends Models.Preferences,
+  >(): Signal<Models.User<TPrefs> | null> {
+    return toSignal(this.onAuth$<TPrefs>(), { initialValue: null });
   }
 
   /* -------------------------------------------------------------------------- */
@@ -88,13 +92,10 @@ export class Account {
    * @returns The user's data.
    */
   async get<TPrefs extends Models.Preferences>(): Promise<Models.User<TPrefs>> {
-    try {
-      const account = await this._account.get<TPrefs>();
-      return account;
-    } catch (error) {
-      console.error('ngx-appwrite: account > get:', error);
-      throw error;
-    }
+    return this._errorHandler.wrap(
+      this._account.get<TPrefs>(),
+      {} as Models.User<TPrefs>, // Default nulls are handled differently in auth, we fallback to object or let it throw based on config
+    );
   }
 
   /**
@@ -112,24 +113,31 @@ export class Account {
    * @param userId The user's ID.
    * @returns The newly created user.
    */
-  async create<
-    Preferences extends Models.Preferences = Models.DefaultPreferences,
-  >(
-    email: string,
-    password: string,
-    defaultPrefs: Preferences = {} as Preferences,
-    name?: string,
-    userId: string = ID.unique(),
-  ): Promise<Models.User<Preferences>> {
-    const account = await this._account.create<Preferences>(
-      userId,
-      email,
-      password,
-      name,
+  async create<Preferences extends Models.Preferences>({
+    email,
+    password,
+    defaultPrefs,
+    name,
+    userId,
+  }: {
+    email: string;
+    password: string;
+    defaultPrefs: Preferences;
+    name?: string;
+    userId?: string;
+  }): Promise<Models.User<Preferences>> {
+    const account = await this._errorHandler.wrap(
+      this._account.create<Preferences>({
+        userId: userId ?? ID.unique(),
+        email,
+        password,
+        name,
+      }),
+      null,
     );
     if (account) {
-      this.triggerAuthCheck();
-      await this.updatePrefs(defaultPrefs);
+      this.updateAuthSubscription();
+      await this.updatePrefs({ prefs: defaultPrefs });
     }
 
     return account as Models.User<Preferences>;
@@ -151,11 +159,17 @@ export class Account {
    * @param password The user's password.
    * @returns The updated user.
    */
-  updateEmail<TPrefs extends Models.Preferences>(
-    email: string,
-    password: string,
-  ): Promise<Models.User<TPrefs>> {
-    return this._account.updateEmail(email, password);
+  updateEmail<TPrefs extends Models.Preferences>({
+    email,
+    password,
+  }: {
+    email: string;
+    password: string;
+  }): Promise<Models.User<TPrefs>> {
+    return this._errorHandler.wrap(
+      this._account.updateEmail({ email, password }),
+      {} as Models.User<TPrefs>,
+    );
   }
 
   /**
@@ -167,8 +181,17 @@ export class Account {
    * @param queries An array of queries to filter the results.
    * @returns The list of identities.
    */
-  listIdentities(queries: string[] = []): Promise<Models.IdentityList> {
-    return this._account.listIdentities(queries);
+  listIdentities({
+    queries,
+    total,
+  }: {
+    queries?: string[];
+    total?: boolean;
+  }): Promise<Models.IdentityList> {
+    return this._errorHandler.wrap(
+      this._account.listIdentities({ queries, total }),
+      {} as Models.IdentityList,
+    );
   }
 
   /**
@@ -179,10 +202,17 @@ export class Account {
    * @param id The ID of the identity to delete.
    * @returns An empty object.
    */
-  async deleteIdentity(id: string): Promise<Record<string, never>> {
-    const result = await this._account.deleteIdentity(id);
+  async deleteIdentity({
+    identityId,
+  }: {
+    identityId: string;
+  }): Promise<Record<string, never>> {
+    const result = await this._errorHandler.wrap(
+      this._account.deleteIdentity({ identityId }),
+      undefined,
+    );
 
-    return result === undefined ? {} : result;
+    return result === undefined ? {} : (result as Record<string, never>);
   }
 
   /**
@@ -197,7 +227,7 @@ export class Account {
    * @returns A JSON Web Token.
    */
   createJWT(): Promise<Models.Jwt> {
-    return this._account.createJWT();
+    return this._errorHandler.wrap(this._account.createJWT(), {} as Models.Jwt);
   }
 
   /**
@@ -209,8 +239,17 @@ export class Account {
    * @param queries An array of queries to filter the results.
    * @returns A list of security logs.
    */
-  listLogs(queries: string[] = []): Promise<Models.LogList> {
-    return this._account.listLogs(queries);
+  listLogs({
+    queries,
+    total,
+  }: {
+    queries?: string[];
+    total?: boolean;
+  }): Promise<Models.LogList> {
+    return this._errorHandler.wrap(
+      this._account.listLogs({ queries, total }),
+      {} as Models.LogList,
+    );
   }
 
   /**
@@ -218,13 +257,18 @@ export class Account {
    *
    * Enable or disable MFA on an account.
    *
-   * @param enableMFA Whether to enable or disable MFA.
+   * @param mfa Whether to enable or disable MFA.
    * @returns The updated user.
    */
-  updateMFA<TPrefs extends Models.Preferences>(
-    enableMFA: boolean,
-  ): Promise<Models.User<TPrefs>> {
-    return this._account.updateMFA(enableMFA);
+  updateMFA<TPrefs extends Models.Preferences>({
+    mfa,
+  }: {
+    mfa: boolean;
+  }): Promise<Models.User<TPrefs>> {
+    return this._errorHandler.wrap(
+      this._account.updateMFA({ mfa }),
+      {} as Models.User<TPrefs>,
+    );
   }
 
   /**
@@ -235,8 +279,13 @@ export class Account {
    *
    * @returns The MFA type.
    */
-  createMfaAuthenticator(): Promise<Models.MfaType> {
-    return this._account.createMfaAuthenticator(AuthenticatorType.Totp);
+  createMFAAuthenticator(): Promise<Models.MfaType> {
+    return this._errorHandler.wrap(
+      this._account.createMFAAuthenticator({
+        type: AuthenticatorType.Totp,
+      }),
+      {} as Models.MfaType,
+    );
   }
 
   /**
@@ -247,10 +296,18 @@ export class Account {
    * @param otp The one-time password from the authenticator app.
    * @returns An empty object.
    */
-  updateMfaAuthenticator<TPrefs extends Models.Preferences>(
-    otp: string,
-  ): Promise<Models.User<TPrefs>> {
-    return this._account.updateMfaAuthenticator(AuthenticatorType.Totp, otp);
+  updateMFAAuthenticator<TPrefs extends Models.Preferences>({
+    otp,
+  }: {
+    otp: string;
+  }): Promise<Models.User<TPrefs>> {
+    return this._errorHandler.wrap(
+      this._account.updateMFAAuthenticator({
+        type: AuthenticatorType.Totp,
+        otp,
+      }),
+      {} as Models.User<TPrefs>,
+    );
   }
 
   /**
@@ -260,8 +317,13 @@ export class Account {
    *
    * @returns An empty object.
    */
-  async deleteMfaAuthenticator(): Promise<void> {
-    await this._account.deleteMfaAuthenticator(AuthenticatorType.Totp);
+  async deleteMFAAuthenticator(): Promise<void> {
+    await this._errorHandler.wrap(
+      this._account.deleteMFAAuthenticator({
+        type: AuthenticatorType.Totp,
+      }),
+      undefined,
+    );
   }
 
   /**
@@ -272,10 +334,13 @@ export class Account {
    * @param factor The authentication factor to use for the challenge.
    * @returns The MFA challenge.
    */
-  createMfaChallenge(
+  createMFAChallenge(
     factor: AuthenticationFactor,
   ): Promise<Models.MfaChallenge> {
-    return this._account.createMfaChallenge(factor);
+    return this._errorHandler.wrap(
+      this._account.createMFAChallenge({ factor }),
+      {} as Models.MfaChallenge,
+    );
   }
 
   /**
@@ -287,13 +352,19 @@ export class Account {
    * @param otp The one-time password from the authenticator app.
    * @returns An empty object.
    */
-  async updateMfaChallenge(
-    challengeId: string,
-    otp: string,
-  ): Promise<Models.Session> {
-    const session = this._account.updateMfaChallenge(challengeId, otp);
-    this.triggerAuthCheck();
-    return session;
+  async updateMFAChallenge({
+    challengeId,
+    otp,
+  }: {
+    challengeId: string;
+    otp: string;
+  }): Promise<Models.Session> {
+    const session = await this._errorHandler.wrap(
+      this._account.updateMFAChallenge({ challengeId, otp }),
+      null,
+    );
+    if (session) this.updateAuthSubscription();
+    return session as Models.Session;
   }
 
   /**
@@ -303,8 +374,11 @@ export class Account {
    *
    * @returns A list of MFA factors.
    */
-  listMfaFactors(): Promise<Models.MfaFactors> {
-    return this._account.listMfaFactors();
+  listMFAFactors(): Promise<Models.MfaFactors> {
+    return this._errorHandler.wrap(
+      this._account.listMFAFactors(),
+      {} as Models.MfaFactors,
+    );
   }
 
   /**
@@ -314,8 +388,11 @@ export class Account {
    *
    * @returns A list of MFA recovery codes.
    */
-  getMfaRecoveryCodes(): Promise<Models.MfaRecoveryCodes> {
-    return this._account.getMfaRecoveryCodes();
+  getMFARecoveryCodes(): Promise<Models.MfaRecoveryCodes> {
+    return this._errorHandler.wrap(
+      this._account.getMFARecoveryCodes(),
+      {} as Models.MfaRecoveryCodes,
+    );
   }
 
   /**
@@ -325,8 +402,11 @@ export class Account {
    *
    * @returns A list of MFA recovery codes.
    */
-  createMfaRecoveryCodes(): Promise<Models.MfaRecoveryCodes> {
-    return this._account.createMfaRecoveryCodes();
+  createMFARecoveryCodes(): Promise<Models.MfaRecoveryCodes> {
+    return this._errorHandler.wrap(
+      this._account.createMFARecoveryCodes(),
+      {} as Models.MfaRecoveryCodes,
+    );
   }
 
   /**
@@ -336,8 +416,11 @@ export class Account {
    *
    * @returns A list of MFA recovery codes.
    */
-  updateMfaRecoveryCodes(): Promise<Models.MfaRecoveryCodes> {
-    return this._account.updateMfaRecoveryCodes();
+  updateMFARecoveryCodes(): Promise<Models.MfaRecoveryCodes> {
+    return this._errorHandler.wrap(
+      this._account.updateMFARecoveryCodes(),
+      {} as Models.MfaRecoveryCodes,
+    );
   }
 
   /**
@@ -348,10 +431,15 @@ export class Account {
    * @param name The user's new name.
    * @returns The updated user.
    */
-  updateName<TPrefs extends Models.Preferences>(
-    name: string,
-  ): Promise<Models.User<TPrefs>> {
-    return this._account.updateName(name);
+  updateName<TPrefs extends Models.Preferences>({
+    name,
+  }: {
+    name: string;
+  }): Promise<Models.User<TPrefs>> {
+    return this._errorHandler.wrap(
+      this._account.updateName({ name }),
+      {} as Models.User<TPrefs>,
+    );
   }
 
   /**
@@ -364,11 +452,17 @@ export class Account {
    * @param oldPassword The user's old password.
    * @returns The updated user.
    */
-  updatePassword<TPrefs extends Models.Preferences>(
-    password: string,
-    oldPassword?: string,
-  ): Promise<Models.User<TPrefs>> {
-    return this._account.updatePassword(password, oldPassword);
+  updatePassword<TPrefs extends Models.Preferences>({
+    password,
+    oldPassword,
+  }: {
+    password: string;
+    oldPassword?: string;
+  }): Promise<Models.User<TPrefs>> {
+    return this._errorHandler.wrap(
+      this._account.updatePassword({ password, oldPassword }),
+      {} as Models.User<TPrefs>,
+    );
   }
 
   /**
@@ -376,15 +470,21 @@ export class Account {
    *
    * Update currently logged in user account phone number.
    *
-   * @param phoneNumber The user's new phone number.
+   * @param phone The user's new phone number.
    * @param password The user's password.
    * @returns The updated user.
    */
-  updatePhone<TPrefs extends Models.Preferences>(
-    phoneNumber: string,
-    password: string,
-  ): Promise<Models.User<TPrefs>> {
-    return this._account.updatePhone(phoneNumber, password);
+  updatePhone<TPrefs extends Models.Preferences>({
+    phone,
+    password,
+  }: {
+    phone: string;
+    password: string;
+  }): Promise<Models.User<TPrefs>> {
+    return this._errorHandler.wrap(
+      this._account.updatePhone({ phone, password }),
+      {} as Models.User<TPrefs>,
+    );
   }
 
   /**
@@ -395,7 +495,10 @@ export class Account {
    * @returns The user's preferences.
    */
   getPrefs<TPrefs extends Models.Preferences>(): Promise<TPrefs> {
-    return this._account.getPrefs<TPrefs>();
+    return this._errorHandler.wrap(
+      this._account.getPrefs<TPrefs>(),
+      {} as TPrefs,
+    );
   }
 
   /**
@@ -407,10 +510,15 @@ export class Account {
    * @param prefs The user's new preferences.
    * @returns The updated user.
    */
-  updatePrefs<TPrefs extends Models.Preferences>(
-    prefs: TPrefs,
-  ): Promise<Models.User<TPrefs>> {
-    return this._account.updatePrefs<TPrefs>(prefs);
+  updatePrefs<TPrefs extends Models.Preferences>({
+    prefs,
+  }: {
+    prefs: TPrefs;
+  }): Promise<Models.User<TPrefs>> {
+    return this._errorHandler.wrap(
+      this._account.updatePrefs<TPrefs>({ prefs }),
+      {} as Models.User<TPrefs>,
+    );
   }
 
   /**
@@ -422,8 +530,17 @@ export class Account {
    * @param url The URL to redirect the user to after the password reset.
    * @returns A token object.
    */
-  createRecovery(email: string, url: string): Promise<Models.Token> {
-    return this._account.createRecovery(email, url);
+  createRecovery({
+    email,
+    url,
+  }: {
+    email: string;
+    url: string;
+  }): Promise<Models.Token> {
+    return this._errorHandler.wrap(
+      this._account.createRecovery({ email, url }),
+      {} as Models.Token,
+    );
   }
 
   /**
@@ -436,12 +553,19 @@ export class Account {
    * @param password The user's new password.
    * @returns A token object.
    */
-  updateRecovery(
-    userId: string,
-    secret: string,
-    password: string,
-  ): Promise<Models.Token> {
-    return this._account.updateRecovery(userId, secret, password);
+  updateRecovery({
+    userId,
+    secret,
+    password,
+  }: {
+    userId: string;
+    secret: string;
+    password: string;
+  }): Promise<Models.Token> {
+    return this._errorHandler.wrap(
+      this._account.updateRecovery({ userId, secret, password }),
+      {} as Models.Token,
+    );
   }
 
   /**
@@ -452,7 +576,10 @@ export class Account {
    * @returns A list of sessions.
    */
   listSessions(): Promise<Models.SessionList> {
-    return this._account.listSessions();
+    return this._errorHandler.wrap(
+      this._account.listSessions(),
+      {} as Models.SessionList,
+    );
   }
 
   /**
@@ -463,10 +590,13 @@ export class Account {
    * @returns An empty object.
    */
   async deleteSessions(): Promise<Record<string, never>> {
-    const deleted = await this._account.deleteSessions();
-    this.triggerAuthCheck();
+    const deleted = await this._errorHandler.wrap(
+      this._account.deleteSessions(),
+      undefined,
+    );
+    this.updateAuthSubscription();
 
-    return deleted === undefined ? {} : deleted;
+    return deleted === undefined ? {} : (deleted as Record<string, never>);
   }
 
   /**
@@ -481,9 +611,12 @@ export class Account {
    * @returns A session object.
    */
   async createAnonymousSession(): Promise<Models.Session> {
-    const session = await this._account.createAnonymousSession();
-    this.triggerAuthCheck();
-    return session;
+    const session = await this._errorHandler.wrap(
+      this._account.createAnonymousSession(),
+      null,
+    );
+    if (session) this.updateAuthSubscription();
+    return session as Models.Session;
   }
 
   /**
@@ -495,34 +628,22 @@ export class Account {
    * @param password The user's password.
    * @returns A session object.
    */
-  async createEmailPasswordSession(
-    email: string,
-    password: string,
-  ): Promise<Models.Session> {
-    const session = await this._account.createEmailPasswordSession(
-      email,
-      password,
+  async createEmailPasswordSession({
+    email,
+    password,
+  }: {
+    email: string;
+    password: string;
+  }): Promise<Models.Session> {
+    const session = await this._errorHandler.wrap(
+      this._account.createEmailPasswordSession({
+        email,
+        password,
+      }),
+      null,
     );
-    this.triggerAuthCheck();
-    return session;
-  }
-
-  /**
-   * Update Magic URL Session
-   *
-   * Use this endpoint to login the user with a magic URL.
-   *
-   * @param userId The user's ID.
-   * @param secret The secret from the magic URL.
-   * @returns A session object.
-   */
-  async updateMagicURLSession(
-    userId: string,
-    secret: string,
-  ): Promise<Models.Session> {
-    const session = await this._account.updateMagicURLSession(userId, secret);
-    this.triggerAuthCheck();
-    return session;
+    if (session) this.updateAuthSubscription();
+    return session as Models.Session;
   }
 
   /**
@@ -537,38 +658,25 @@ export class Account {
    * @param scopes An array of scopes to request.
    * @returns The OAuth2 session.
    */
-  async createOAuth2Session(
-    provider: OAuthProvider,
-    success?: string,
-    failure?: string,
-    scopes?: string[],
-  ): Promise<string | void> {
-    const res = this._account.createOAuth2Session(
+  async createOAuth2Session({
+    provider,
+    success,
+    failure,
+    scopes,
+  }: {
+    provider: OAuthProvider;
+    success?: string;
+    failure?: string;
+    scopes?: string[];
+  }): Promise<string | void> {
+    const res = this._account.createOAuth2Session({
       provider,
       success,
       failure,
       scopes,
-    );
-    this.triggerAuthCheck();
+    });
+    this.updateAuthSubscription();
     return res;
-  }
-
-  /**
-   * Update Phone Session
-   *
-   * Use this endpoint to login the user with a phone number and secret.
-   *
-   * @param userId The user's ID.
-   * @param secret The secret from the SMS.
-   * @returns A session object.
-   */
-  async updatePhoneSession(
-    userId: string,
-    secret: string,
-  ): Promise<Models.Session> {
-    const session = await this._account.updatePhoneSession(userId, secret);
-    this.triggerAuthCheck();
-    return session;
   }
 
   /**
@@ -580,9 +688,15 @@ export class Account {
    * @param secret The secret from the token.
    * @returns A session object.
    */
-  createSession(userId: string, secret: string): Promise<Models.Session> {
-    const session = this._account.createSession(userId, secret);
-    this.triggerAuthCheck();
+  createSession({
+    userId,
+    secret,
+  }: {
+    userId: string;
+    secret: string;
+  }): Promise<Models.Session> {
+    const session = this._account.createSession({ userId, secret });
+    this.updateAuthSubscription();
     return session;
   }
 
@@ -594,8 +708,12 @@ export class Account {
    * @param sessionId The ID of the session to get.
    * @returns A session object.
    */
-  getSession(sessionId = 'current'): Promise<Models.Session> {
-    return this._account.getSession(sessionId);
+  getSession({
+    sessionId = 'current',
+  }: {
+    sessionId?: string;
+  }): Promise<Models.Session> {
+    return this._account.getSession({ sessionId });
   }
 
   /**
@@ -606,8 +724,12 @@ export class Account {
    * @param sessionId The ID of the session to update.
    * @returns A session object.
    */
-  updateSession(sessionId = 'current'): Promise<Models.Session> {
-    return this._account.updateSession(sessionId);
+  updateSession({
+    sessionId = 'current',
+  }: {
+    sessionId?: string;
+  }): Promise<Models.Session> {
+    return this._account.updateSession({ sessionId });
   }
 
   /**
@@ -618,9 +740,13 @@ export class Account {
    * @param sessionId The ID of the session to delete.
    * @returns An empty object.
    */
-  async deleteSession(sessionId = 'current'): Promise<Record<string, never>> {
-    const deleted = await this._account.deleteSession(sessionId);
-    this.triggerAuthCheck();
+  async deleteSession({
+    sessionId = 'current',
+  }: {
+    sessionId?: string;
+  }): Promise<Record<string, never>> {
+    const deleted = await this._account.deleteSession({ sessionId });
+    this.updateAuthSubscription();
 
     return deleted === undefined ? {} : deleted;
   }
@@ -648,12 +774,16 @@ export class Account {
    * @param providerId The ID of the provider to use.
    * @returns A push target object.
    */
-  createPushTarget(
-    targetId: string,
-    identifier: string,
-    providerId?: string,
-  ): Promise<Models.Target> {
-    return this._account.createPushTarget(targetId, identifier, providerId);
+  createPushTarget({
+    targetId,
+    identifier,
+    providerId,
+  }: {
+    targetId: string;
+    identifier: string;
+    providerId?: string;
+  }): Promise<Models.Target> {
+    return this._account.createPushTarget({ targetId, identifier, providerId });
   }
 
   /**
@@ -665,11 +795,14 @@ export class Account {
    * @param identifier The identifier of the push target.
    * @returns A push target object.
    */
-  updatePushTarget(
-    targetId: string,
-    identifier: string,
-  ): Promise<Models.Target> {
-    return this._account.updatePushTarget(targetId, identifier);
+  updatePushTarget({
+    targetId,
+    identifier,
+  }: {
+    targetId: string;
+    identifier: string;
+  }): Promise<Models.Target> {
+    return this._account.updatePushTarget({ targetId, identifier });
   }
 
   /**
@@ -680,8 +813,12 @@ export class Account {
    * @param targetId The ID of the push target.
    * @returns An empty object.
    */
-  async deletePushTarget(targetId: string): Promise<Record<string, never>> {
-    const result = await this._account.deletePushTarget(targetId);
+  async deletePushTarget({
+    targetId,
+  }: {
+    targetId: string;
+  }): Promise<Record<string, never>> {
+    const result = await this._account.deletePushTarget({ targetId });
 
     return result === undefined ? {} : result;
   }
@@ -696,12 +833,16 @@ export class Account {
    * @param phrase Whether to use a phrase or a secret.
    * @returns A token object.
    */
-  createEmailToken(
-    userId: string,
-    email: string,
-    phrase = false,
-  ): Promise<Models.Token> {
-    return this._account.createEmailToken(userId, email, phrase);
+  createEmailToken({
+    userId,
+    email,
+    phrase,
+  }: {
+    userId: string;
+    email: string;
+    phrase?: boolean;
+  }): Promise<Models.Token> {
+    return this._account.createEmailToken({ userId, email, phrase });
   }
 
   /**
@@ -715,12 +856,17 @@ export class Account {
    * @param phrase Whether to use a phrase or a secret.
    * @returns A token object.
    */
-  createMagicURLToken(
-    userId: string = ID.unique(),
-    email: string,
-    url?: string,
-    phrase = true,
-  ): Promise<Models.Token> {
+  createMagicURLToken({
+    userId,
+    email,
+    url,
+    phrase,
+  }: {
+    userId: string;
+    email: string;
+    url?: string;
+    phrase?: boolean;
+  }): Promise<Models.Token> {
     return this._account.createMagicURLToken(userId, email, url, phrase);
   }
 
@@ -735,12 +881,17 @@ export class Account {
    * @param scopes An array of scopes to request.
    * @returns A new session.
    */
-  async createOAuth2Token(
-    provider: OAuthProvider,
-    success?: string,
-    failure?: string,
-    scopes?: string[],
-  ): Promise<string | void> {
+  async createOAuth2Token({
+    provider,
+    success,
+    failure,
+    scopes,
+  }: {
+    provider: OAuthProvider;
+    success?: string;
+    failure?: string;
+    scopes?: string[];
+  }): Promise<string | void> {
     return this._account.createOAuth2Token(provider, success, failure, scopes);
   }
 
@@ -753,8 +904,14 @@ export class Account {
    * @param phone The user's phone number.
    * @returns A token object.
    */
-  createPhoneToken(userId: string, phone: string): Promise<Models.Token> {
-    return this._account.createPhoneToken(userId, phone);
+  createPhoneToken({
+    userId,
+    phone,
+  }: {
+    userId: string;
+    phone: string;
+  }): Promise<Models.Token> {
+    return this._account.createPhoneToken({ userId, phone });
   }
 
   /**
@@ -765,8 +922,8 @@ export class Account {
    * @param url The URL to redirect the user to after the verification.
    * @returns A token object.
    */
-  createVerification(url: string): Promise<Models.Token> {
-    return this._account.createVerification(url);
+  createEmailVerification({ url }: { url: string }): Promise<Models.Token> {
+    return this._account.createEmailVerification({ url });
   }
 
   /**
@@ -778,8 +935,14 @@ export class Account {
    * @param secret The secret from the verification email.
    * @returns A token object.
    */
-  updateVerification(userId: string, secret: string): Promise<Models.Token> {
-    return this._account.updateVerification(userId, secret);
+  updateEmailVerification({
+    userId,
+    secret,
+  }: {
+    userId: string;
+    secret: string;
+  }): Promise<Models.Token> {
+    return this._account.updateEmailVerification({ userId, secret });
   }
 
   /**
@@ -802,11 +965,14 @@ export class Account {
    * @param secret The secret from the verification SMS.
    * @returns A token object.
    */
-  updatePhoneVerification(
-    userId: string,
-    secret: string,
-  ): Promise<Models.Token> {
-    return this._account.updatePhoneVerification(userId, secret);
+  updatePhoneVerification({
+    userId,
+    secret,
+  }: {
+    userId: string;
+    secret: string;
+  }): Promise<Models.Token> {
+    return this._account.updatePhoneVerification({ userId, secret });
   }
 
   /* -------------------------------------------------------------------------- */
@@ -826,23 +992,29 @@ export class Account {
    * @returns {Promise<Models.User<T>>}
    */
   async convertAnonymousAccountWithEmailAndPassword<
-    Preferences extends Models.Preferences = Models.DefaultPreferences,
-  >(email: string, password: string): Promise<Models.User<Preferences>> {
-    const account = await this._account.updateEmail<Preferences>(
+    Preferences extends Models.Preferences,
+  >({
+    email,
+    password,
+  }: {
+    email: string;
+    password: string;
+  }): Promise<Models.User<Preferences>> {
+    const account = await this._account.updateEmail<Preferences>({
       email,
       password,
-    );
-    this.triggerAuthCheck();
+    });
+    this.updateAuthSubscription();
     return account as Models.User<Preferences>;
   }
 
   /**
-   * Logout - Shortcut for  deletesession
+   * Logout - Shortcut for deleteSession
    *
    * @returns An empty object.
    */
   async logout(): Promise<Record<string, never>> {
-    await this.deleteSession();
+    await this.deleteSession({ sessionId: 'current' });
     return {};
   }
 
@@ -854,8 +1026,20 @@ export class Account {
    * reactive monitoring of authentication status
    * @returns {void}
    */
-  triggerAuthCheck(): void {
-    this._triggerManualAuthCheck$.next(true);
+  updateAuthSubscription(): void {
+    if (this._authWatchSubscription) {
+      this._authWatchSubscription.unsubscribe();
+    }
+
+    this._authWatchSubscription = this._client$
+      .pipe(
+        switchMap((client) => watch(client, 'account')),
+        // Use exhaustMap to ignore new inner observables while one is still active
+        exhaustMap(() => from(this.get())),
+        distinctUntilChanged((prev, curr) => prev?.$id === curr?.$id),
+        catchError(() => of(null)),
+      )
+      .subscribe((user) => this._auth$.next(user));
   }
 }
 

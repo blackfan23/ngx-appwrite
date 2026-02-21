@@ -1,17 +1,18 @@
-import { Injectable, Provider } from '@angular/core';
+import { inject, Injectable, Provider } from '@angular/core';
 import {
-  Avatars as AppwriteAvatars,
-  Browser,
-  CreditCard,
-  Flag,
+    Avatars as AppwriteAvatars,
+    Browser,
+    CreditCard,
+    Flag,
 } from 'appwrite';
-import { CLIENT } from './setup';
+import { APPWRITE_CLIENT } from './setup';
 
 @Injectable({
   providedIn: 'root',
 })
 export class Avatars {
-  private readonly _avatars = new AppwriteAvatars(CLIENT());
+  private readonly _client = inject(APPWRITE_CLIENT);
+  private readonly _avatars = new AppwriteAvatars(this._client);
 
   /**
    * Get Browser Icon
@@ -32,13 +33,20 @@ export class Avatars {
    * @param quality The image quality.
    * @returns The browser icon URL.
    */
-  getBrowser(
-    code: Browser,
-    width?: number,
-    height?: number,
-    quality?: number,
-  ): string {
-    return this._avatars.getBrowser(code, width, height, quality).toString();
+  getBrowser({
+    code,
+    width,
+    height,
+    quality,
+  }: {
+    code: Browser;
+    width?: number;
+    height?: number;
+    quality?: number;
+  }): string {
+    return this._avatars
+      .getBrowser({ code, width, height, quality })
+      .toString();
   }
 
   /**
@@ -60,13 +68,18 @@ export class Avatars {
    * @param quality The image quality.
    * @returns The credit card icon URL.
    */
-  getCreditCard(
-    code: CreditCard,
-    width?: number,
-    height?: number,
-    quality?: number,
-  ): string {
-    return this._avatars.getCreditCard(code, width, height, quality).toString();
+  getCreditCard({
+    code,
+    width,
+    height,
+    quality,
+  }: {
+    code: CreditCard;
+    width?: number;
+    height?: number;
+    quality?: number;
+  }): string {
+    return this._avatars.getCreditCard({ code, width, height, quality });
   }
 
   /**
@@ -80,7 +93,7 @@ export class Avatars {
    * @returns The favicon URL.
    */
   getFavicon(url: string): string {
-    return this._avatars.getFavicon(url).toString();
+    return this._avatars.getFavicon({ url });
   }
 
   /**
@@ -103,13 +116,18 @@ export class Avatars {
    * @param quality The image quality.
    * @returns The country flag URL.
    */
-  getFlag(
-    code: Flag,
-    width?: number,
-    height?: number,
-    quality?: number,
-  ): string {
-    return this._avatars.getFlag(code, width, height, quality).toString();
+  getFlag({
+    code,
+    width,
+    height,
+    quality,
+  }: {
+    code: Flag;
+    width?: number;
+    height?: number;
+    quality?: number;
+  }): string {
+    return this._avatars.getFlag({ code, width, height, quality });
   }
 
   /**
@@ -131,8 +149,16 @@ export class Avatars {
    * @param height The image height.
    * @returns The image URL.
    */
-  getImage(url: string, width?: number, height?: number): string {
-    return this._avatars.getImage(url, width, height).toString();
+  getImage({
+    url,
+    width,
+    height,
+  }: {
+    url: string;
+    width?: number;
+    height?: number;
+  }): string {
+    return this._avatars.getImage({ url, width, height });
   }
 
   /**
@@ -161,15 +187,18 @@ export class Avatars {
    * @param background The background color.
    * @returns The user initials URL.
    */
-  getInitials(
-    name?: string,
-    width?: number,
-    height?: number,
-    background?: string,
-  ): string {
-    return this._avatars
-      .getInitials(name, width, height, background)
-      .toString();
+  getInitials({
+    name,
+    width,
+    height,
+    background,
+  }: {
+    name?: string;
+    width?: number;
+    height?: number;
+    background?: string;
+  }): string {
+    return this._avatars.getInitials({ name, width, height, background });
   }
 
   /**
@@ -185,13 +214,18 @@ export class Avatars {
    * @param download Whether to download the QR code.
    * @returns The QR code URL.
    */
-  getQR(
-    text: string,
-    size?: number,
-    margin?: number,
-    download?: boolean,
-  ): string {
-    return this._avatars.getQR(text, size, margin, download).toString();
+  getQR({
+    text,
+    size,
+    margin,
+    download,
+  }: {
+    text: string;
+    size?: number;
+    margin?: number;
+    download?: boolean;
+  }): string {
+    return this._avatars.getQR({ text, size, margin, download });
   }
 }
 
